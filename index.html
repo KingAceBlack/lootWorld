@@ -3,492 +3,409 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>LootMap3 — World Map</title>
+<title>LootMap4 — World Map</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@400;600&family=IM+Fell+English+SC&display=swap" rel="stylesheet"/>
 <style>
   :root {
-    --cave:    #7c5ccc;
-    --cave-dim:#3d2d6e;
-    --castle:  #c0392b;
-    --castle-dim:#6e1a13;
-    --forest:  #27ae60;
-    --forest-dim:#0e4a28;
-    --shared:  #d4a017;
-    --shared-dim:#6e500a;
-    --boss:    #ff4500;
-    --bg:      #0a0a12;
-    --panel:   #11111e;
-    --line:    rgba(255,255,255,0.07);
+    --cave:   #7c5ccc; --castle: #c0392b; --forest: #27ae60;
+    --shared: #d4a017; --boss:   #ff4500; --lore:   #4fc3f7;
+    --trap:   #e74c3c; --npc:    #3498db; --beast:  #ff9500;
+    --bg:     #08080f; --panel:  #10101c;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    background: var(--bg);
-    font-family: 'Cinzel', serif;
-    color: #ddd;
-    overflow-x: auto;
-    min-height: 100vh;
-  }
+  body { background:var(--bg); font-family:'Cinzel',serif; color:#ddd; }
 
-  /* ── HEADER ── */
-  header {
-    text-align: center;
-    padding: 28px 20px 10px;
-    background: linear-gradient(180deg, #0d0d1f 0%, transparent 100%);
-    position: relative;
-  }
+  header { text-align:center; padding:22px 20px 8px; }
   header h1 {
-    font-family: 'Cinzel Decorative', cursive;
-    font-size: clamp(1.2rem, 3vw, 2.2rem);
-    letter-spacing: .15em;
-    background: linear-gradient(135deg, #a78bfa, #f59e0b, #34d399);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    text-shadow: none;
+    font-family:'Cinzel Decorative',cursive;
+    font-size:clamp(1.1rem,2.5vw,2rem); letter-spacing:.14em;
+    background:linear-gradient(135deg,#a78bfa,#f59e0b,#34d399);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
   }
-  header p {
-    font-family: 'IM Fell English SC', serif;
-    font-size: .78rem;
-    color: #666;
-    margin-top: 4px;
-    letter-spacing: .2em;
-  }
+  header p { font-family:'IM Fell English SC',serif; font-size:.72rem; color:#555; margin-top:3px; letter-spacing:.18em; }
 
-  /* ── LEGEND ── */
   .legend {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 14px;
-    padding: 14px 20px 6px;
+    display:flex; flex-wrap:wrap; justify-content:center;
+    gap:10px 18px; padding:10px 20px 4px;
   }
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-size: .7rem;
-    letter-spacing: .08em;
-    color: #aaa;
-  }
-  .legend-dot {
-    width: 12px; height: 12px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
+  .li { display:flex; align-items:center; gap:6px; font-size:.65rem; color:#888; letter-spacing:.07em; }
+  .ld { width:11px; height:11px; border-radius:50%; flex-shrink:0; }
 
-  /* ── CANVAS WRAPPER ── */
-  .canvas-wrap {
-    width: 100%;
-    overflow-x: auto;
-    padding: 10px 20px 30px;
-  }
-  svg {
-    display: block;
-    margin: 0 auto;
-    font-family: 'Cinzel', serif;
-  }
+  .canvas-wrap { overflow-x:auto; padding:6px 16px 30px; }
+  svg { display:block; margin:0 auto; }
 
-  /* ── NODE STYLES ── */
-  .node-circle {
-    cursor: pointer;
-    transition: filter .2s;
-  }
-  .node-circle:hover { filter: brightness(1.5) drop-shadow(0 0 8px currentColor); }
+  .node-g { cursor:pointer; }
+  .node-g:hover .node-main { filter:brightness(1.7) drop-shadow(0 0 7px currentColor); }
 
-  /* ── TOOLTIP ── */
+  /* multi-type badge ring colours */
+  .type-ring { fill:none; stroke-width:1.2; }
+
   #tooltip {
-    position: fixed;
-    background: #11111edd;
-    border: 1px solid #333;
-    border-radius: 8px;
-    padding: 10px 14px;
-    font-size: .72rem;
-    line-height: 1.7;
-    pointer-events: none;
-    z-index: 9999;
-    display: none;
-    max-width: 220px;
-    box-shadow: 0 4px 24px #000a;
+    position:fixed; background:#0e0e1cee; border:1px solid #2a2a3a;
+    border-radius:9px; padding:10px 14px; font-size:.7rem; line-height:1.75;
+    pointer-events:none; z-index:9999; display:none; max-width:250px;
+    box-shadow:0 6px 28px #000c;
   }
-  #tooltip .tt-name { font-size: .9rem; font-weight: 600; margin-bottom: 4px; }
-  #tooltip .tt-biome { font-size: .65rem; letter-spacing: .12em; margin-bottom: 6px; color: #888; }
-  #tooltip .tt-row { display: flex; gap: 6px; }
-  #tooltip .tt-label { color: #777; min-width: 62px; }
-  #tooltip .tt-val { color: #eee; }
-  #tooltip .loot-badge {
-    display: inline-block;
-    margin-top: 6px;
-    background: #d4a01733;
-    border: 1px solid #d4a017;
-    border-radius: 4px;
-    padding: 1px 7px;
-    font-size: .62rem;
-    color: #d4a017;
-    letter-spacing: .1em;
-  }
+  #tooltip .tt-title { font-size:.88rem; font-weight:700; margin-bottom:3px; }
+  #tooltip .tt-sub   { font-size:.6rem; letter-spacing:.13em; color:#666; margin-bottom:6px; }
+  #tooltip .tt-row   { display:flex; gap:5px; }
+  #tooltip .tt-lbl   { color:#666; min-width:64px; }
+  #tooltip .tt-val   { color:#e0e0e0; }
+  #tooltip .tt-lore  { margin-top:6px; font-style:italic; color:#4fc3f7; font-size:.66rem; line-height:1.55; border-top:1px solid #222; padding-top:6px; }
+  #tooltip .badge    { display:inline-block; margin:4px 2px 0; border-radius:3px; padding:1px 6px; font-size:.58rem; letter-spacing:.09em; }
+  #tooltip .loot-b   { background:#d4a01722; border:1px solid #d4a017; color:#d4a017; }
+  #tooltip .beast-b  { background:#ff950022; border:1px solid #ff9500; color:#ff9500; }
 </style>
 </head>
 <body>
-
 <header>
-  <h1>LootMap 3 — World Map</h1>
-  <p>Cave &nbsp;·&nbsp; Castle &nbsp;·&nbsp; Forest &nbsp;·&nbsp; Shared Convergence</p>
+  <h1>LootMap 4 — World Map</h1>
+  <p>Cave · Castle · Forest · Shared Convergence</p>
 </header>
 
 <div class="legend">
-  <div class="legend-item"><div class="legend-dot" style="background:#7c5ccc"></div>Cave Path</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#c0392b"></div>Castle Path</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#27ae60"></div>Forest Path</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#d4a017"></div>Shared Final</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#ff4500"></div>Boss Node</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#4fc3f7; border:2px solid #fff4"></div>Loot Node ✦</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#555; border:2px dashed #e74c3c88"></div>Trap Node ⚠</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#555; border:2px solid #3498db88"></div>NPC Merchant</div>
+  <div class="li"><div class="ld" style="background:#7c5ccc"></div>Cave</div>
+  <div class="li"><div class="ld" style="background:#c0392b"></div>Castle</div>
+  <div class="li"><div class="ld" style="background:#27ae60"></div>Forest</div>
+  <div class="li"><div class="ld" style="background:#d4a017"></div>Shared</div>
+  <div class="li"><div class="ld" style="background:#ff4500"></div>Boss</div>
+  <div class="li"><div class="ld" style="background:#4fc3f7; border:2px solid #fff3"></div>Lore</div>
+  <div class="li"><div class="ld" style="background:#e74c3c; border:2px dashed #fff5"></div>Trap</div>
+  <div class="li"><div class="ld" style="background:#3498db"></div>NPC/Merchant</div>
+  <div class="li"><div class="ld" style="background:#08080f; border:2px solid #d4a017"></div>✦ Loot</div>
+  <div class="li"><div class="ld" style="background:#ff9500; border-radius:2px"></div>LsBeast</div>
+  <div class="li"><div class="ld" style="background:#333; border:1.5px dashed #888"></div>Multi-type (RNG)</div>
 </div>
 
 <div class="canvas-wrap">
-  <svg id="map" viewBox="0 0 1300 820" width="1300" height="820"></svg>
+  <svg id="map" viewBox="0 0 1340 1020" width="1340" height="1020"></svg>
 </div>
-
 <div id="tooltip"></div>
 
 <script>
-// ─────────────────────────────────────
-// MAP DATA
-// ─────────────────────────────────────
-const nodes = {
-  // CAVE PATH (left column, top area)
-  C_1:  { biome:'Cave',   type:'Battle', enemies:['BatSwarm','MireGrub'],             traps:[],                  npcs:[],         loot:false, connections:['C_2','C_3'] },
-  C_2:  { biome:'Cave',   type:'Battle', enemies:['RockGolem','DeepGnome'],            traps:[],                  npcs:[],         loot:false, connections:['C_1','C_4'] },
-  C_3:  { biome:'Cave',   type:'Battle', enemies:['CaveTroll','Zombie'],               traps:[],                  npcs:[],         loot:false, connections:['C_1','C_4'] },
-  C_4:  { biome:'Cave',   type:'Npc',    enemies:[],                                  traps:[],                  npcs:['Merchant'],loot:false, connections:['C_2','C_3','C_5','C_6'] },
-  C_5:  { biome:'Cave',   type:'Battle', enemies:['BlindStalker','CrystalSpider'],     traps:[],                  npcs:[],         loot:false, connections:['C_4','C_7'] },
-  C_6:  { biome:'Cave',   type:'Battle', enemies:['GloomWraith','Demon'],              traps:[],                  npcs:[],         loot:false, connections:['C_4','C_7'] },
-  C_7:  { biome:'Cave',   type:'Trap',   enemies:[],                                  traps:['Stalactite Collapse'],npcs:[],       loot:false, connections:['C_5','C_6','C_8','C_9'] },
-  C_8:  { biome:'Cave',   type:'Battle', enemies:['StoneSerpent','EchoLich'],          traps:[],                  npcs:[],         loot:true,  connections:['C_7','C_10'] },
-  C_9:  { biome:'Cave',   type:'Battle', enemies:['Wizard','CrystalSpider','MireGrub'],traps:[],                  npcs:[],         loot:false, connections:['C_7','C_10'] },
-  C_10: { biome:'Cave',   type:'Boss',   enemies:['CaveWarden'],                      traps:[],                  npcs:[],         loot:true,  connections:['C_8','C_9','S_1'] },
+// ─────────────── DATA ───────────────
+const NODES = {
+// ── CAVE ──────────────────────────────────────────────────
+C_1:    {b:'Cave',   types:['Battle'],              en:['BatSwarm','MireGrub','LsBeast_CaveStalker'],               tr:[],                             npcs:[],          lore:'',         loot:false,  cx:['C_2','C_3']},
+C_2:    {b:'Cave',   types:['Battle','Trap','Lore'], en:['RockGolem','DeepGnome','LsBeast_DeepHowler'],              tr:['Stalactite Collapse','Sinkhole'],npcs:[],         lore:'Ancient carvings line the passage — a forgotten people once sealed something vast and hungry behind these walls.',loot:false, cx:['C_1','C_4']},
+C_3:    {b:'Cave',   types:['Battle','Trap','Lore'], en:['CaveTroll','Zombie','LsBeast_ShardFang'],                  tr:['Gas Pocket Ignition'],        npcs:[],          lore:'Scorched bones of an earlier expedition. Their journal reads: "The light moves on its own down here."',loot:false, cx:['C_1','C_4']},
+C_4:    {b:'Cave',   types:['Npc'],                 en:[],                                                          tr:[],                             npcs:['Merchant'], lore:'',         loot:false,  cx:['C_2','C_3','C_5','C_6']},
+C_5:    {b:'Cave',   types:['Battle','Trap','Lore'], en:['BlindStalker','CrystalSpider','LsBeast_GloomHunter'],      tr:['Acid Pool Spray','Sinkhole'], npcs:[],          lore:'A perfectly preserved shrine to an unnamed cave deity. Offerings of teeth and crystal are still fresh.',loot:false, cx:['C_4','C_7']},
+C_6:    {b:'Cave',   types:['Battle','Trap','Lore'], en:['GloomWraith','Demon','LsBeast_AbyssalCrawler'],            tr:['Stalactite Collapse'],        npcs:[],          lore:'The cave hums a low resonant frequency. Anyone who hears it long enough begins to see shapes in the dark.',loot:false, cx:['C_4','C_7']},
+C_7:    {b:'Cave',   types:['Trap'],                en:[],                                                          tr:['Stalactite Collapse','Gas Pocket Ignition','Sinkhole'],npcs:[], lore:'', loot:false, cx:['C_5','C_6','C_8','C_9']},
+C_8:    {b:'Cave',   types:['Battle','Lore'],        en:['StoneSerpent','EchoLich','LsBeast_VoidMole'],              tr:[],                             npcs:[],          lore:'A blind oracle sits cross-legged here, unaging. She says: "The warden is the cave\'s grief made flesh."', loot:true,  cx:['C_7','C_10']},
+C_9:    {b:'Cave',   types:['Battle','Trap','Lore'], en:['Wizard','CrystalSpider','LsBeast_CrystalRager'],           tr:['Acid Pool Spray'],            npcs:[],          lore:'Thousands of crystal formations each contain a tiny preserved creature — insects, rodents, and one small child\'s hand.',loot:false, cx:['C_7','C_10']},
+C_10:   {b:'Cave',   types:['Battle'],              en:['EchoLich','LsBeast_GloomHunter','BlindStalker'],           tr:[],                             npcs:[],          lore:'',         loot:true,   cx:['C_8','C_9','C_11','C_12']},
+C_11:   {b:'Cave',   types:['Battle','Trap','Lore'], en:['DeepGnome','LsBeast_DeepHowler','RockGolem'],              tr:['Sinkhole','Gas Pocket Ignition'],npcs:[],         lore:'Graffiti scratched by a previous adventurer: "If you reach this point, turn back. The warden knows you are here."',loot:false, cx:['C_10','C_BOSS']},
+C_12:   {b:'Cave',   types:['Battle','Lore'],        en:['GloomWraith','LsBeast_CaveStalker','MireGrub'],            tr:[],                             npcs:[],          lore:'A vast underground lake, perfectly still. Something enormous moves beneath the surface but never breaks it.', loot:false, cx:['C_10','C_BOSS']},
+C_BOSS: {b:'Cave',   types:['Battle'],              en:['CaveWarden'],                                              tr:[],                             npcs:[],          lore:'',         loot:true,   cx:['C_11','C_12','S_1']},
 
-  // CASTLE PATH (middle column)
-  K_1:  { biome:'Castle', type:'Battle', enemies:['KnightGuard','GargoyleWatch'],      traps:[],                  npcs:[],         loot:false, connections:['K_2','K_3'] },
-  K_2:  { biome:'Castle', type:'Battle', enemies:['ShadowArcher','CursedSteward'],     traps:[],                  npcs:[],         loot:false, connections:['K_1','K_4'] },
-  K_3:  { biome:'Castle', type:'Battle', enemies:['Zombie','KnightGuard'],             traps:[],                  npcs:[],         loot:false, connections:['K_1','K_4'] },
-  K_4:  { biome:'Castle', type:'Npc',    enemies:[],                                  traps:[],                  npcs:['Merchant'],loot:false, connections:['K_2','K_3','K_5','K_6'] },
-  K_5:  { biome:'Castle', type:'Battle', enemies:['IronGolem','DreadSentinel'],        traps:[],                  npcs:[],         loot:false, connections:['K_4','K_7'] },
-  K_6:  { biome:'Castle', type:'Battle', enemies:['BansheeNoble','Demon'],             traps:[],                  npcs:[],         loot:false, connections:['K_4','K_7'] },
-  K_7:  { biome:'Castle', type:'Trap',   enemies:[],                                  traps:['Portcullis Slam'], npcs:[],         loot:false, connections:['K_5','K_6','K_8','K_9'] },
-  K_8:  { biome:'Castle', type:'Battle', enemies:['SpectralKnight','ChainWraith'],     traps:[],                  npcs:[],         loot:true,  connections:['K_7','K_10'] },
-  K_9:  { biome:'Castle', type:'Battle', enemies:['VoidCaster','Wizard','CursedSteward'],traps:[],               npcs:[],         loot:false, connections:['K_7','K_10'] },
-  K_10: { biome:'Castle', type:'Boss',   enemies:['CastleOverlord'],                  traps:[],                  npcs:[],         loot:true,  connections:['K_8','K_9','S_1'] },
+// ── CASTLE ────────────────────────────────────────────────
+K_1:    {b:'Castle', types:['Battle'],              en:['KnightGuard','GargoyleWatch','LsBeast_SiegeBreaker'],      tr:[],                             npcs:[],          lore:'',         loot:false,  cx:['K_2','K_3']},
+K_2:    {b:'Castle', types:['Battle','Trap','Lore'], en:['ShadowArcher','CursedSteward','LsBeast_HallowedBrute'],   tr:['Arrow Volley','Swinging Blade Pendulum'],npcs:[],  lore:'A portrait gallery — every painted face has been scratched out. Someone didn\'t want to be remembered.',loot:false, cx:['K_1','K_4']},
+K_3:    {b:'Castle', types:['Battle','Trap','Lore'], en:['Zombie','KnightGuard','LsBeast_TowerWraith'],             tr:['Flame Jet'],                  npcs:[],          lore:'The throne room is frozen mid-feast. Skeletal courtiers still clutch goblets. The food never rotted.',loot:false, cx:['K_1','K_4']},
+K_4:    {b:'Castle', types:['Npc'],                 en:[],                                                         tr:[],                             npcs:['Merchant'], lore:'',         loot:false,  cx:['K_2','K_3','K_5','K_6']},
+K_5:    {b:'Castle', types:['Battle','Trap','Lore'], en:['IronGolem','DreadSentinel','LsBeast_GildedFiend'],        tr:['Portcullis Slam','Arrow Volley'],npcs:[],         lore:'A library with every book sealed in wax. One lies open: "The Overlord fed on his own bloodline to prolong the curse."',loot:false, cx:['K_4','K_7']},
+K_6:    {b:'Castle', types:['Battle','Trap','Lore'], en:['BansheeNoble','Demon','LsBeast_CryptStalker'],            tr:['Swinging Blade Pendulum'],    npcs:[],          lore:'A child\'s bedroom, untouched. A music box plays by itself. Its tune is the same as the Banshee\'s wail.',loot:false, cx:['K_4','K_7']},
+K_7:    {b:'Castle', types:['Trap'],                en:[],                                                         tr:['Portcullis Slam','Swinging Blade Pendulum','Arrow Volley','Flame Jet'],npcs:[], lore:'', loot:false, cx:['K_5','K_6','K_8','K_9']},
+K_8:    {b:'Castle', types:['Battle','Lore'],        en:['SpectralKnight','ChainWraith','LsBeast_BattlementGhoul'], tr:[],                             npcs:[],          lore:'A ghost soldier stands at attention, following orders from a king dead for centuries. He cannot be stopped.',loot:true,  cx:['K_7','K_10']},
+K_9:    {b:'Castle', types:['Battle','Trap','Lore'], en:['VoidCaster','Wizard','LsBeast_IronJaw'],                  tr:['Flame Jet'],                  npcs:[],          lore:'Runes carved in the floor, translated: "He who rules here borrowed power he could not return."',loot:false, cx:['K_7','K_10']},
+K_10:   {b:'Castle', types:['Battle'],              en:['SpectralKnight','LsBeast_SiegeBreaker','DreadSentinel'],  tr:[],                             npcs:[],          lore:'',         loot:true,   cx:['K_8','K_9','K_11','K_12']},
+K_11:   {b:'Castle', types:['Battle','Trap','Lore'], en:['GargoyleWatch','LsBeast_CryptStalker','CursedSteward'],   tr:['Arrow Volley','Portcullis Slam'],npcs:[],        lore:'The castle\'s lowest dungeon holds one cell. Inside: a mirror. Your reflection doesn\'t move when you do.',loot:false, cx:['K_10','K_BOSS']},
+K_12:   {b:'Castle', types:['Battle','Lore'],        en:['ChainWraith','LsBeast_HallowedBrute','BansheeNoble'],    tr:[],                             npcs:[],          lore:'A vast war room with a map of the entire region. Every city is marked "fallen". Every settlement is marked "consumed".',loot:false, cx:['K_10','K_BOSS']},
+K_BOSS: {b:'Castle', types:['Battle'],              en:['CastleOverlord'],                                         tr:[],                             npcs:[],          lore:'',         loot:true,   cx:['K_11','K_12','S_1']},
 
-  // FOREST PATH (right column)
-  F_1:  { biome:'Forest', type:'Battle', enemies:['ThornSprite','DuskRaven'],          traps:[],                  npcs:[],         loot:false, connections:['F_2','F_3'] },
-  F_2:  { biome:'Forest', type:'Battle', enemies:['FangWolf','SporeWalker'],           traps:[],                  npcs:[],         loot:false, connections:['F_1','F_4'] },
-  F_3:  { biome:'Forest', type:'Battle', enemies:['WillOWisp','Zombie'],               traps:[],                  npcs:[],         loot:false, connections:['F_1','F_4'] },
-  F_4:  { biome:'Forest', type:'Npc',    enemies:[],                                  traps:[],                  npcs:['Merchant'],loot:false, connections:['F_2','F_3','F_5','F_6'] },
-  F_5:  { biome:'Forest', type:'Battle', enemies:['MossGiant','BrambleFiend'],         traps:[],                  npcs:[],         loot:false, connections:['F_4','F_7'] },
-  F_6:  { biome:'Forest', type:'Battle', enemies:['GreenHag','Demon'],                 traps:[],                  npcs:[],         loot:false, connections:['F_4','F_7'] },
-  F_7:  { biome:'Forest', type:'Trap',   enemies:[],                                  traps:['Enchanted Snare'], npcs:[],         loot:false, connections:['F_5','F_6','F_8','F_9'] },
-  F_8:  { biome:'Forest', type:'Battle', enemies:['RootElemental','AncientDryad'],     traps:[],                  npcs:[],         loot:true,  connections:['F_7','F_10'] },
-  F_9:  { biome:'Forest', type:'Battle', enemies:['Wizard','ThornSprite','SporeWalker'],traps:[],                 npcs:[],         loot:false, connections:['F_7','F_10'] },
-  F_10: { biome:'Forest', type:'Boss',   enemies:['ForestAncient'],                   traps:[],                  npcs:[],         loot:true,  connections:['F_8','F_9','S_1'] },
+// ── FOREST ────────────────────────────────────────────────
+F_1:    {b:'Forest', types:['Battle'],              en:['ThornSprite','DuskRaven','LsBeast_GroveSerpent'],          tr:[],                             npcs:[],          lore:'',         loot:false,  cx:['F_2','F_3']},
+F_2:    {b:'Forest', types:['Battle','Trap','Lore'], en:['FangWolf','SporeWalker','LsBeast_MireStag'],              tr:['Thorn Wall Surge','Quicksand Hollow'],npcs:[],  lore:'The trees here grow in a perfect ring. At the center, flowers bloom in the shape of a screaming face.',loot:false, cx:['F_1','F_4']},
+F_3:    {b:'Forest', types:['Battle','Trap','Lore'], en:['WillOWisp','Zombie','LsBeast_BarkGolem'],                 tr:['Enchanted Snare'],            npcs:[],          lore:'A ring of torches that never extinguish. Something was imprisoned here and escaped recently.',loot:false, cx:['F_1','F_4']},
+F_4:    {b:'Forest', types:['Npc'],                 en:[],                                                         tr:[],                             npcs:['Merchant'], lore:'',         loot:false,  cx:['F_2','F_3','F_5','F_6']},
+F_5:    {b:'Forest', types:['Battle','Trap','Lore'], en:['MossGiant','BrambleFiend','LsBeast_NightBloom'],          tr:['Spore Burst','Thorn Wall Surge'],npcs:[],        lore:'An ancient druid circle. The standing stones hum. One has a fresh handprint burned into it — palm-side in.',loot:false, cx:['F_4','F_7']},
+F_6:    {b:'Forest', types:['Battle','Trap','Lore'], en:['GreenHag','Demon','LsBeast_CanopyLurker'],                tr:['Quicksand Hollow'],           npcs:[],          lore:'A hollow tree the size of a tower. Inside: thousands of names carved into the bark. Your name is there.',loot:false, cx:['F_4','F_7']},
+F_7:    {b:'Forest', types:['Trap'],                en:[],                                                         tr:['Enchanted Snare','Thorn Wall Surge','Quicksand Hollow','Spore Burst'],npcs:[], lore:'', loot:false, cx:['F_5','F_6','F_8','F_9']},
+F_8:    {b:'Forest', types:['Battle','Lore'],        en:['RootElemental','AncientDryad','LsBeast_FungalHorror'],    tr:[],                             npcs:[],          lore:'A clearing full of petrified animals, all frozen mid-run, all facing the same direction — away from the forest\'s heart.',loot:true, cx:['F_7','F_10']},
+F_9:    {b:'Forest', types:['Battle','Trap','Lore'], en:['Wizard','ThornSprite','LsBeast_GroveSerpent'],            tr:['Spore Burst'],                npcs:[],          lore:'The floor is covered in bioluminescent moss that pulsates in rhythm with a heartbeat that isn\'t yours.',loot:false, cx:['F_7','F_10']},
+F_10:   {b:'Forest', types:['Battle'],              en:['AncientDryad','LsBeast_BarkGolem','MossGiant'],           tr:[],                             npcs:[],          lore:'',         loot:true,   cx:['F_8','F_9','F_11','F_12']},
+F_11:   {b:'Forest', types:['Battle','Trap','Lore'], en:['SporeWalker','LsBeast_MireStag','FangWolf'],              tr:['Thorn Wall Surge','Quicksand Hollow'],npcs:[],  lore:'A river runs red — not with blood but something older. The water shows visions of the forest before it was corrupted.',loot:false, cx:['F_10','F_BOSS']},
+F_12:   {b:'Forest', types:['Battle','Lore'],        en:['GreenHag','LsBeast_NightBloom','BrambleFiend'],           tr:[],                             npcs:[],          lore:'The Ancient is not an enemy. It was a guardian, twisted by the same force you now pursue. Its eyes still hold grief.',loot:false, cx:['F_10','F_BOSS']},
+F_BOSS: {b:'Forest', types:['Battle'],              en:['ForestAncient'],                                          tr:[],                             npcs:[],          lore:'',         loot:true,   cx:['F_11','F_12','S_1']},
 
-  // SHARED
-  S_1:        { biome:'Shared', type:'Npc',    enemies:[],                                              traps:[],                    npcs:['Merchant'], loot:false, connections:['C_10','K_10','F_10','S_2'] },
-  S_2:        { biome:'Shared', type:'Battle', enemies:['Demon','Wizard','ChainWraith','EchoLich'],      traps:[],                    npcs:[],           loot:false, connections:['S_1','S_3'] },
-  S_3:        { biome:'Shared', type:'Trap',   enemies:[],                                              traps:['Collapsing Floor'],   npcs:[],           loot:false, connections:['S_2','S_4'] },
-  S_4:        { biome:'Shared', type:'Battle', enemies:['AncientDryad','VoidCaster','EchoLich','Zombie','Demon'], traps:[], npcs:[], loot:true,  connections:['S_3','S_5'] },
-  S_5:        { biome:'Shared', type:'Boss',   enemies:['GrandHeraldOfRuin'],                           traps:[],                    npcs:[],           loot:true,  connections:['S_4','FINAL_BOSS'] },
-  FINAL_BOSS: { biome:'Shared', type:'FinalBoss', enemies:['EternalWarplet'],                           traps:[],                    npcs:[],           loot:true,  connections:['S_5'] },
+// ── SHARED ────────────────────────────────────────────────
+S_1:        {b:'Shared', types:['Npc'],          en:[],                                   tr:[],                          npcs:['Merchant'],lore:'',         loot:false, cx:['C_BOSS','K_BOSS','F_BOSS','S_2']},
+S_2:        {b:'Shared', types:['Battle'],       en:['Demon','Wizard','ChainWraith'],      tr:[],                          npcs:[],          lore:'',         loot:false, cx:['S_1','S_3']},
+S_3:        {b:'Shared', types:['Trap'],         en:[],                                   tr:['Collapsing Floor','Void Rift Pulse'],npcs:[],lore:'',         loot:false, cx:['S_2','S_4']},
+S_4:        {b:'Shared', types:['Battle','Lore'],en:['EchoLich','VoidCaster','Demon'],     tr:[],                          npcs:[],          lore:'Three biomes, three corrupted guardians, one source. The Eternal Warplet was born from the land\'s own despair.',loot:true, cx:['S_3','S_5']},
+S_5:        {b:'Shared', types:['Battle'],       en:['GrandHeraldOfRuin'],                tr:[],                          npcs:[],          lore:'',         loot:true,  cx:['S_4','S_PRE']},
+S_PRE:      {b:'Shared', types:['Lore','Npc'],   en:[],                                   tr:[],                          npcs:['Merchant'],lore:'Beyond this threshold the air tastes like the end of all things. A voice says: "Whatever you were before, you will not be that after."',loot:false, cx:['S_5','FINAL_BOSS']},
+FINAL_BOSS: {b:'Shared', types:['Battle'],       en:['EternalWarplet'],                   tr:[],                          npcs:[],          lore:'',         loot:true,  cx:['S_PRE']},
 };
 
-// ─────────────────────────────────────
-// LAYOUT POSITIONS
-// Each biome gets its own lane; shared nodes center
-// ─────────────────────────────────────
+// ─────────────── POSITIONS ───────────────
+// Lane centers
+const CX = 185, KX = 665, FX = 1145, SX = 665;
 
-// Grid layout: x = biome lane, y = tier (top to bottom = path start to boss)
-// Cave: x ~170    Castle: x ~650    Forest: x ~1130
-// Branching: offset ±70 for branch nodes
-
-const W = 1300, H = 820;
-const CAVE_X = 170, CASTLE_X = 650, FOREST_X = 1130;
-const SHARED_X = 650;
-
-// Tier Y positions for path nodes (10 per biome)
-const tiers = {
-  1:  55,   // entry
-  2:  130,  // branch A
-  3:  130,  // branch B (offset right)
-  4:  220,  // merchant
-  5:  300,  // branch A
-  6:  300,  // branch B
-  7:  390,  // trap
-  8:  470,  // mini-boss branch A
-  9:  470,  // branch B
-  10: 560,  // biome boss
+// Y tiers for biome nodes (more tiers now for 12+boss nodes)
+const T = {
+  1:   40,   // entry
+  2:  110,   // branch A
+  3:  110,   // branch B (+offset)
+  4:  195,   // merchant
+  5:  265,   // branch A
+  6:  265,   // branch B
+  7:  345,   // trap hub
+  8:  415,   // new branch A
+  9:  415,   // new branch B
+  10: 495,   // mini-boss
+  11: 565,   // extra branch A
+  12: 565,   // extra branch B
+  B:  645,   // biome boss
 };
+const OFF = 72; // branch offset
 
-// Shared final nodes
-const sharedTiers = {
-  S_1:        680,
-  S_2:        730,
-  S_3:        760,
-  S_4:        790,
-  S_5:        760,
-  FINAL_BOSS: 810,
-};
-
-// Manual x offsets for branching within a biome
-const branchOffset = 65; // px left/right of center
-
-const positions = {};
-
-function setPos(id, x, y) { positions[id] = {x, y}; }
+const P = {};
+function sp(id,x,y){P[id]={x,y};}
 
 // CAVE
-setPos('C_1',  CAVE_X,                tiers[1]);
-setPos('C_2',  CAVE_X - branchOffset, tiers[2]);
-setPos('C_3',  CAVE_X + branchOffset, tiers[3]);
-setPos('C_4',  CAVE_X,                tiers[4]);
-setPos('C_5',  CAVE_X - branchOffset, tiers[5]);
-setPos('C_6',  CAVE_X + branchOffset, tiers[6]);
-setPos('C_7',  CAVE_X,                tiers[7]);
-setPos('C_8',  CAVE_X - branchOffset, tiers[8]);
-setPos('C_9',  CAVE_X + branchOffset, tiers[9]);
-setPos('C_10', CAVE_X,                tiers[10]);
+sp('C_1',  CX,       T[1]);
+sp('C_2',  CX-OFF,   T[2]);
+sp('C_3',  CX+OFF,   T[3]);
+sp('C_4',  CX,       T[4]);
+sp('C_5',  CX-OFF,   T[5]);
+sp('C_6',  CX+OFF,   T[6]);
+sp('C_7',  CX,       T[7]);
+sp('C_8',  CX-OFF,   T[8]);
+sp('C_9',  CX+OFF,   T[9]);
+sp('C_10', CX,       T[10]);
+sp('C_11', CX-OFF,   T[11]);
+sp('C_12', CX+OFF,   T[12]);
+sp('C_BOSS',CX,      T['B']);
 
 // CASTLE
-setPos('K_1',  CASTLE_X,                tiers[1]);
-setPos('K_2',  CASTLE_X - branchOffset, tiers[2]);
-setPos('K_3',  CASTLE_X + branchOffset, tiers[3]);
-setPos('K_4',  CASTLE_X,                tiers[4]);
-setPos('K_5',  CASTLE_X - branchOffset, tiers[5]);
-setPos('K_6',  CASTLE_X + branchOffset, tiers[6]);
-setPos('K_7',  CASTLE_X,                tiers[7]);
-setPos('K_8',  CASTLE_X - branchOffset, tiers[8]);
-setPos('K_9',  CASTLE_X + branchOffset, tiers[9]);
-setPos('K_10', CASTLE_X,                tiers[10]);
+sp('K_1',  KX,       T[1]);
+sp('K_2',  KX-OFF,   T[2]);
+sp('K_3',  KX+OFF,   T[3]);
+sp('K_4',  KX,       T[4]);
+sp('K_5',  KX-OFF,   T[5]);
+sp('K_6',  KX+OFF,   T[6]);
+sp('K_7',  KX,       T[7]);
+sp('K_8',  KX-OFF,   T[8]);
+sp('K_9',  KX+OFF,   T[9]);
+sp('K_10', KX,       T[10]);
+sp('K_11', KX-OFF,   T[11]);
+sp('K_12', KX+OFF,   T[12]);
+sp('K_BOSS',KX,      T['B']);
 
 // FOREST
-setPos('F_1',  FOREST_X,                tiers[1]);
-setPos('F_2',  FOREST_X - branchOffset, tiers[2]);
-setPos('F_3',  FOREST_X + branchOffset, tiers[3]);
-setPos('F_4',  FOREST_X,                tiers[4]);
-setPos('F_5',  FOREST_X - branchOffset, tiers[5]);
-setPos('F_6',  FOREST_X + branchOffset, tiers[6]);
-setPos('F_7',  FOREST_X,                tiers[7]);
-setPos('F_8',  FOREST_X - branchOffset, tiers[8]);
-setPos('F_9',  FOREST_X + branchOffset, tiers[9]);
-setPos('F_10', FOREST_X,                tiers[10]);
+sp('F_1',  FX,       T[1]);
+sp('F_2',  FX-OFF,   T[2]);
+sp('F_3',  FX+OFF,   T[3]);
+sp('F_4',  FX,       T[4]);
+sp('F_5',  FX-OFF,   T[5]);
+sp('F_6',  FX+OFF,   T[6]);
+sp('F_7',  FX,       T[7]);
+sp('F_8',  FX-OFF,   T[8]);
+sp('F_9',  FX+OFF,   T[9]);
+sp('F_10', FX,       T[10]);
+sp('F_11', FX-OFF,   T[11]);
+sp('F_12', FX+OFF,   T[12]);
+sp('F_BOSS',FX,      T['B']);
 
-// SHARED (linear funnel, center)
-setPos('S_1',        SHARED_X,          610);
-setPos('S_2',        SHARED_X,          665);
-setPos('S_3',        SHARED_X,          710);
-setPos('S_4',        SHARED_X,          755);
-setPos('S_5',        SHARED_X,          790);
-setPos('FINAL_BOSS', SHARED_X,          810); // pushed down later
+// SHARED
+sp('S_1',   SX,  720);
+sp('S_2',   SX,  775);
+sp('S_3',   SX,  820);
+sp('S_4',   SX,  860);
+sp('S_5',   SX,  900);
+sp('S_PRE', SX,  940);
+sp('FINAL_BOSS', SX, 985);
 
-// ─────────────────────────────────────
-// COLORS
-// ─────────────────────────────────────
-const biomeColor = {
-  Cave:    '#7c5ccc',
-  Castle:  '#c0392b',
-  Forest:  '#27ae60',
-  Shared:  '#d4a017',
-};
-const typeIcon = {
-  Battle:    '⚔',
-  Npc:       '🛒',
-  Trap:      '⚠',
-  Boss:      '💀',
-  FinalBoss: '☠',
-};
+// ─────────────── COLOURS ───────────────
+const BC = {Cave:'#7c5ccc', Castle:'#c0392b', Forest:'#27ae60', Shared:'#d4a017'};
+const TI  = {Battle:'⚔', Trap:'⚠', Lore:'📖', Npc:'🛒', Boss:'💀'};
 
-// ─────────────────────────────────────
-// RENDER
-// ─────────────────────────────────────
+function nodeColor(id, node) {
+  if (id === 'FINAL_BOSS' || id.endsWith('_BOSS') || id.endsWith('_10')) return id === 'FINAL_BOSS' ? '#ff4500' : BC[node.b];
+  if (node.types.includes('Npc'))  return '#3498db';
+  if (node.types.includes('Lore') && node.types.includes('Battle')) return '#9b59b6';
+  if (node.types.includes('Lore')) return '#4fc3f7';
+  if (node.types.includes('Trap')) return '#e74c3c';
+  return BC[node.b] || '#888';
+}
+
+function nodeRadius(id, node) {
+  if (id === 'FINAL_BOSS') return 20;
+  if (id.endsWith('_BOSS')) return 17;
+  if (id.endsWith('_10'))   return 14;
+  if (node.types.includes('Npc')) return 13;
+  return 11;
+}
+
+function hasLsBeast(node) {
+  return node.en.some(e => e.startsWith('LsBeast_'));
+}
+
+// ─────────────── SVG RENDER ───────────────
+const NS  = 'http://www.w3.org/2000/svg';
 const svg = document.getElementById('map');
-const NS = 'http://www.w3.org/2000/svg';
 
-function el(tag, attrs, parent) {
+function el(tag, a, p) {
   const e = document.createElementNS(NS, tag);
-  for (const [k,v] of Object.entries(attrs)) e.setAttribute(k,v);
-  if (parent) parent.appendChild(e);
+  for (const [k,v] of Object.entries(a)) e.setAttribute(k,v);
+  if (p) p.appendChild(e);
   return e;
 }
 
-// Defs: glow filters + gradients
-const defs = el('defs', {}, svg);
-
-const biomeDefs = [
-  ['cave-glow',    '#7c5ccc'],
-  ['castle-glow',  '#c0392b'],
-  ['forest-glow',  '#27ae60'],
-  ['shared-glow',  '#d4a017'],
-  ['boss-glow',    '#ff4500'],
-];
-biomeDefs.forEach(([id, color]) => {
-  const f = el('filter', {id, x:'-50%', y:'-50%', width:'200%', height:'200%'}, defs);
-  const fe = el('feDropShadow', {dx:'0', dy:'0', stdDeviation:'4', 'flood-color': color, 'flood-opacity':'0.8'}, f);
+// Defs
+const defs = el('defs',{},svg);
+const glows = [['cg','#7c5ccc'],['kg','#c0392b'],['fg','#27ae60'],['sg','#d4a017'],['bg','#ff4500'],['lg','#4fc3f7']];
+glows.forEach(([id,col]) => {
+  const f = el('filter',{id, x:'-60%',y:'-60%',width:'220%',height:'220%'},defs);
+  el('feDropShadow',{dx:'0',dy:'0',stdDeviation:'5','flood-color':col,'flood-opacity':'0.85'},f);
 });
 
-// Radial bg gradients per biome lane
-[
-  [CAVE_X,    '#1a0d3a', 240],
-  [CASTLE_X,  '#2d0a08', 240],
-  [FOREST_X,  '#0a2d14', 240],
-].forEach(([cx, color, r]) => {
-  const g = el('radialGradient', {id:`bg-${cx}`, cx:'50%', cy:'50%', r:'50%', gradientUnits:'userSpaceOnUse',
-    x1:0, y1:0, x2:0, y2:1, fx: cx, fy: 350, r: r}, defs);
-  el('stop', {offset:'0%',   'stop-color': color, 'stop-opacity':'1'}, g);
-  el('stop', {offset:'100%', 'stop-color': '#0a0a12', 'stop-opacity':'0'}, g);
+// BG
+el('rect',{x:0,y:0,width:1340,height:1020,fill:'#08080f'},svg);
+
+// Lane background strips
+[[CX,'#7c5ccc'],[KX,'#c0392b'],[FX,'#27ae60']].forEach(([x,c]) => {
+  el('rect',{x:x-105,y:0,width:210,height:680,fill:c,opacity:'0.035'},svg);
 });
-
-// Background
-el('rect', {x:0, y:0, width:W, height:H, fill:'#0a0a12'}, svg);
-
-// Subtle lane bg strips
-[
-  [CAVE_X,    '#7c5ccc', 200],
-  [CASTLE_X,  '#c0392b', 200],
-  [FOREST_X,  '#27ae60', 200],
-].forEach(([cx, color, w]) => {
-  el('rect', {x: cx-w/2, y:0, width:w, height:600, rx:0,
-    fill: color, opacity:'0.04'}, svg);
-});
-
-// Shared zone bg
-el('rect', {x: 300, y:580, width:700, height:240, rx:12,
-  fill:'#d4a017', opacity:'0.04'}, svg);
+el('rect',{x:250,y:695,width:840,height:330,rx:14,fill:'#d4a017',opacity:'0.04'},svg);
 
 // Biome labels
-[
-  [CAVE_X,    'CAVE',    '#7c5ccc'],
-  [CASTLE_X,  'CASTLE',  '#c0392b'],
-  [FOREST_X,  'FOREST',  '#27ae60'],
-].forEach(([x, label, color]) => {
-  const t = el('text', {x, y:22, 'text-anchor':'middle',
-    fill: color, opacity:'0.6',
-    style:`font-family:'Cinzel Decorative',cursive;font-size:11px;letter-spacing:.18em`}, svg);
+[['CAVE',CX,'#7c5ccc'],['CASTLE',KX,'#c0392b'],['FOREST',FX,'#27ae60']].forEach(([label,x,c]) => {
+  const t = el('text',{x,y:18,'text-anchor':'middle',fill:c,opacity:'0.55',
+    style:"font-family:'Cinzel Decorative',cursive;font-size:10px;letter-spacing:.17em"},svg);
   t.textContent = label;
 });
-const shLabel = el('text', {x: SHARED_X, y:600, 'text-anchor':'middle',
-  fill:'#d4a017', opacity:'0.7',
-  style:`font-family:'Cinzel Decorative',cursive;font-size:10px;letter-spacing:.2em`}, svg);
-shLabel.textContent = '— CONVERGENCE —';
+const sl = el('text',{x:SX,y:710,'text-anchor':'middle',fill:'#d4a017',opacity:'0.6',
+  style:"font-family:'Cinzel Decorative',cursive;font-size:9px;letter-spacing:.2em"},svg);
+sl.textContent = '— CONVERGENCE —';
 
-// ── Draw edges ──────────────────────────────
-const edgeGroup = el('g', {opacity:'0.55'}, svg);
-
-const drawnEdges = new Set();
-for (const [id, node] of Object.entries(nodes)) {
-  for (const conn of node.connections) {
-    const key = [id, conn].sort().join('|');
-    if (drawnEdges.has(key)) continue;
-    drawnEdges.add(key);
-    const a = positions[id], b = positions[conn];
-    if (!a || !b) continue;
-    const color = id.startsWith('S') || conn.startsWith('S') || id === 'FINAL_BOSS' || conn === 'FINAL_BOSS'
-      ? '#d4a017' : biomeColor[node.biome] || '#666';
-
-    // Curved path for branches, straight for linear
-    const dx = b.x - a.x, dy = b.y - a.y;
-    const cx1 = a.x + dx*0.1, cy1 = a.y + dy*0.6;
-    const cx2 = b.x - dx*0.1, cy2 = b.y - dy*0.4;
-    const d = Math.abs(dx) < 5
+// ── EDGES ──
+const edgeG = el('g',{opacity:'0.5'},svg);
+const drawn = new Set();
+for (const [id, node] of Object.entries(NODES)) {
+  for (const conn of node.cx) {
+    const key = [id,conn].sort().join('|');
+    if (drawn.has(key) || !P[id] || !P[conn]) continue;
+    drawn.add(key);
+    const a = P[id], b = P[conn];
+    const isShared = id.startsWith('S') || conn.startsWith('S') || id==='FINAL_BOSS' || conn==='FINAL_BOSS';
+    const isBossLink = (id.endsWith('_BOSS') && conn==='S_1') || (conn.endsWith('_BOSS') && id==='S_1');
+    const col = isBossLink ? '#d4a017' : isShared ? '#d4a017' : BC[node.b] || '#888';
+    const dx = b.x-a.x, dy = b.y-a.y;
+    const isStraight = Math.abs(dx) < 8;
+    const d = isStraight
       ? `M${a.x},${a.y} L${b.x},${b.y}`
-      : `M${a.x},${a.y} C${cx1},${cy1} ${cx2},${cy2} ${b.x},${b.y}`;
-
-    el('path', {d, fill:'none', stroke: color,
-      'stroke-width': id.startsWith('S') || conn.startsWith('S') ? '1.5' : '1.2',
-      'stroke-dasharray': node.type === 'Trap' || nodes[conn]?.type === 'Trap' ? '4,3' : 'none'
-    }, edgeGroup);
+      : `M${a.x},${a.y} C${a.x+dx*.1},${a.y+dy*.6} ${b.x-dx*.1},${b.y-dy*.4} ${b.x},${b.y}`;
+    el('path',{d, fill:'none', stroke:col,
+      'stroke-width': isBossLink?1.8:isShared?1.6:1.2,
+      'stroke-dasharray': node.types.includes('Trap') || NODES[conn]?.types.includes('Trap') ? '4,3':''
+    }, edgeG);
   }
 }
 
-// Convergence lines from biome bosses to S_1
-['C_10','K_10','F_10'].forEach(bossId => {
-  const a = positions[bossId], b = positions['S_1'];
-  const mx = (a.x+b.x)/2, my = (a.y+b.y)/2 + 20;
-  el('path', {
-    d: `M${a.x},${a.y} Q${mx},${my} ${b.x},${b.y}`,
-    fill:'none', stroke:'#d4a017', 'stroke-width':'1.5', opacity:'0.7'
-  }, edgeGroup);
+// Boss convergence arcs
+['C_BOSS','K_BOSS','F_BOSS'].forEach(bid => {
+  const a = P[bid], b = P['S_1'];
+  const mx = (a.x+b.x)/2, my = (a.y+b.y)/2+30;
+  el('path',{d:`M${a.x},${a.y} Q${mx},${my} ${b.x},${b.y}`,
+    fill:'none',stroke:'#d4a017','stroke-width':'1.6',opacity:'0.65'},edgeG);
 });
 
-// ── Draw nodes ──────────────────────────────
-const nodeGroup = el('g', {}, svg);
+// ── NODES ──
+const nodeG = el('g',{},svg);
+for (const [id, node] of Object.entries(NODES)) {
+  const pos = P[id]; if (!pos) continue;
+  const col  = nodeColor(id, node);
+  const r    = nodeRadius(id, node);
+  const isMulti = node.types.length > 1;
+  const isBoss  = id === 'FINAL_BOSS' || id.endsWith('_BOSS');
+  const isMini  = id.endsWith('_10');
+  const hasLsB  = hasLsBeast(node);
 
-for (const [id, node] of Object.entries(nodes)) {
-  const pos = positions[id];
-  if (!pos) continue;
+  const gf = isBoss ? 'url(#bg)' : node.b==='Cave'?'url(#cg)':node.b==='Castle'?'url(#kg)':node.b==='Forest'?'url(#fg)':node.types.includes('Lore')?'url(#lg)':'url(#sg)';
 
-  const color = node.type === 'FinalBoss' ? '#ff4500'
-              : node.biome === 'Shared'   ? '#d4a017'
-              : biomeColor[node.biome]    || '#888';
+  const g = el('g',{class:'node-g', transform:`translate(${pos.x},${pos.y})`}, nodeG);
 
-  const r = node.type === 'FinalBoss' ? 20
-          : node.type === 'Boss'       ? 16
-          : node.type === 'Npc'        ? 13
-          : 11;
-
-  const glow = node.biome === 'Cave'   ? 'url(#cave-glow)'
-             : node.biome === 'Castle' ? 'url(#castle-glow)'
-             : node.biome === 'Forest' ? 'url(#forest-glow)'
-             : node.type === 'FinalBoss' ? 'url(#boss-glow)'
-             : 'url(#shared-glow)';
-
-  const g = el('g', {class:'node-circle', transform:`translate(${pos.x},${pos.y})`}, nodeGroup);
-
-  // Outer ring for loot nodes
+  // Loot ring
   if (node.loot) {
-    el('circle', {r: r+4, fill:'none', stroke:'#d4a017', 'stroke-width':'1',
-      'stroke-dasharray':'3,2', opacity:'0.7'}, g);
+    el('circle',{r:r+5,fill:'none',stroke:'#d4a017','stroke-width':'1',
+      'stroke-dasharray':'3,2',opacity:'0.75'},g);
+  }
+
+  // Multi-type dashed outer ring
+  if (isMulti) {
+    el('circle',{r:r+2.5,fill:'none',stroke:'#888','stroke-width':'1',
+      'stroke-dasharray':'3,2',opacity:'0.6'},g);
+  }
+
+  // LsBeast indicator (small orange triangle badge at top-right)
+  if (hasLsB) {
+    const bx = r*0.65, by = -(r*0.65);
+    el('circle',{cx:bx,cy:by,r:4,fill:'#ff9500',opacity:'0.9'},g);
+    const lt = el('text',{x:bx,y:by+3.5,'text-anchor':'middle',
+      style:'font-size:5px;fill:#000;font-weight:700'},g);
+    lt.textContent = '🐉';
   }
 
   // Main circle
-  const fillColor = node.type === 'Trap' ? '#1e1e2e' : '#11111e';
-  el('circle', {r, fill: fillColor, stroke: color, 'stroke-width': node.type==='FinalBoss'?3:1.8,
-    filter: node.type === 'Boss' || node.type === 'FinalBoss' || node.loot ? glow : 'none'
-  }, g);
+  el('circle',{class:'node-main',r,
+    fill: node.types.includes('Npc') ? '#0d1a2a'
+        : node.types.includes('Lore') && !node.types.includes('Battle') ? '#051a25'
+        : '#0e0e1a',
+    stroke: col, 'stroke-width': isBoss?3:isMini?2:1.8,
+    filter: isBoss||node.loot||isMini ? gf : 'none'
+  },g);
 
   // Icon
-  const icon = el('text', {
-    x:0, y: node.type==='FinalBoss'?6:4,
-    'text-anchor':'middle',
-    style:`font-size:${node.type==='FinalBoss'?12: node.type==='Boss'?10:8}px`
-  }, g);
-  icon.textContent = typeIcon[node.type] || '⚔';
+  const icon = el('text',{x:0,y:r*.38+1,'text-anchor':'middle',
+    style:`font-size:${isBoss?12:9}px`},g);
+  // Pick dominant icon for multi-type
+  const dom = node.types.includes('Npc') ? 'Npc'
+            : node.types.includes('Lore') && !node.types.includes('Battle') ? 'Lore'
+            : node.types.includes('Trap') && !node.types.includes('Battle') ? 'Trap'
+            : node.types.includes('Battle') ? 'Battle' : node.types[0];
+  icon.textContent = isBoss ? '💀' : (TI[dom] || '⚔');
 
-  // Label below node
-  const label = el('text', {
-    x:0, y: r + 11,
-    'text-anchor':'middle',
-    fill: color,
-    style:`font-size:7.5px;letter-spacing:.06em;font-family:'Cinzel',serif;font-weight:600`
-  }, g);
-  label.textContent = id;
+  // Multi-type mini type dots at bottom
+  if (isMulti && node.types.length > 1) {
+    const dotCols = {Battle:'#c0392b',Trap:'#e74c3c',Lore:'#4fc3f7',Npc:'#3498db'};
+    const startX  = -(node.types.length-1)*4;
+    node.types.forEach((t,i) => {
+      el('circle',{cx:startX+i*8,cy:r+5,r:2.5,fill:dotCols[t]||'#888',opacity:'0.85'},g);
+    });
+  }
 
-  // Tooltip interaction
-  g.addEventListener('mouseenter', (e) => {
+  // Label
+  const lbl = el('text',{x:0,y:r+16,'text-anchor':'middle',fill:col,
+    style:`font-size:${isBoss?8.5:7}px;letter-spacing:.05em;font-family:'Cinzel',serif;font-weight:600`},g);
+  lbl.textContent = id.replace('_BOSS',' ★').replace('FINAL_BOSS','☠ FINAL');
+
+  // Tooltip
+  g.addEventListener('mouseenter', () => {
     const tt = document.getElementById('tooltip');
-    let html = `<div class="tt-name" style="color:${color}">${typeIcon[node.type]} ${id}</div>`;
-    html += `<div class="tt-biome">${node.biome.toUpperCase()} · ${node.type.toUpperCase()}</div>`;
-    if (node.enemies.length) html += `<div class="tt-row"><span class="tt-label">Enemies:</span><span class="tt-val">${node.enemies.join(', ')}</span></div>`;
-    if (node.traps.length)   html += `<div class="tt-row"><span class="tt-label">Trap:</span><span class="tt-val">${node.traps.join(', ')}</span></div>`;
-    if (node.npcs.length)    html += `<div class="tt-row"><span class="tt-label">NPC:</span><span class="tt-val">${node.npcs.join(', ')}</span></div>`;
-    html += `<div class="tt-row"><span class="tt-label">Connects:</span><span class="tt-val">${node.connections.join(', ')}</span></div>`;
-    if (node.loot) html += `<div class="loot-badge">✦ LOOT NODE</div>`;
-    tt.innerHTML = html;
+    const dominated = node.types.join(' / ');
+    const enemies = node.en.filter(e=>!e.startsWith('LsBeast_'));
+    const beasts  = node.en.filter(e=> e.startsWith('LsBeast_')).map(e=>e.replace('LsBeast_',''));
+    let h = `<div class="tt-title" style="color:${col}">${id}</div>`;
+    h += `<div class="tt-sub">${node.b.toUpperCase()} &nbsp;·&nbsp; ${dominated}</div>`;
+    if (enemies.length) h += `<div class="tt-row"><span class="tt-lbl">Enemies:</span><span class="tt-val">${enemies.join(', ')}</span></div>`;
+    if (beasts.length)  h += `<div class="tt-row"><span class="tt-lbl">LsBeasts:</span><span class="tt-val" style="color:#ff9500">${beasts.join(', ')}</span></div>`;
+    if (node.tr.length) h += `<div class="tt-row"><span class="tt-lbl">Traps:</span><span class="tt-val">${node.tr.join(', ')}</span></div>`;
+    if (node.npcs.length) h += `<div class="tt-row"><span class="tt-lbl">NPC:</span><span class="tt-val">${node.npcs.join(', ')}</span></div>`;
+    h += `<div class="tt-row"><span class="tt-lbl">Connects:</span><span class="tt-val">${node.cx.join(', ')}</span></div>`;
+    if (node.loot) h += `<span class="badge loot-b">✦ LOOT NODE</span>`;
+    if (beasts.length) h += `<span class="badge beast-b">🐉 LSBEAST</span>`;
+    if (node.lore) h += `<div class="tt-lore">"${node.lore}"</div>`;
+    tt.innerHTML = h;
     tt.style.display = 'block';
   });
-  g.addEventListener('mousemove', (e) => {
+  g.addEventListener('mousemove', e => {
     const tt = document.getElementById('tooltip');
-    tt.style.left = (e.clientX + 14) + 'px';
-    tt.style.top  = (e.clientY - 10) + 'px';
+    tt.style.left = (e.clientX+15)+'px';
+    tt.style.top  = (e.clientY-12)+'px';
   });
   g.addEventListener('mouseleave', () => {
     document.getElementById('tooltip').style.display = 'none';
