@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LootGear — Forge Your Equipment</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Crimson+Pro:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <style>
+        :root {
+            --gold:    #c9a84c;
+            --gold2:   #e8cb7a;
+            --ember:   #ff6b35;
+            --dark0:   #0a0806;
+            --dark1:   #110e09;
+            --dark2:   #1a1610;
+            --dark3:   #251f16;
+            --dark4:   #332a1c;
+            --text:    #d4c5a9;
+            --text-dim:#7a6e5c;
+            --border:  #3a3020;
+            --cave:    #6b3fa0;
+            --castle:  #a04040;
+            --forest:  #3a7a4a;
+            --shared:  #c9a84c;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--dark0);
+            min-height: 100vh;
+            font-family: 'Crimson Pro', Georgia, serif;
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        /* Texture overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                radial-gradient(ellipse 80% 60% at 50% 0%, rgba(201,168,76,0.06) 0%, transparent 70%),
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%230a0806'/%3E%3Crect x='0' y='0' width='1' height='1' fill='%23ffffff' opacity='0.015'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ─── HEADER ─── */
+        header {
+            position: relative;
+            text-align: center;
+            padding: 48px 20px 32px;
+            border-bottom: 1px solid var(--border);
+            z-index: 1;
+        }
+        header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; left: 50%; transform: translateX(-50%);
+            width: 200px; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+        }
+        .logo-glyph {
+            font-size: 2.4rem;
+            line-height: 1;
+            margin-bottom: 12px;
+            display: block;
+            filter: drop-shadow(0 0 16px rgba(201,168,76,0.5));
+        }
+        h1 {
+            font-family: 'Cinzel', serif;
+            font-size: clamp(1.8rem, 4vw, 3rem);
+            font-weight: 900;
+            letter-spacing: 0.15em;
+            color: var(--gold);
+            text-shadow: 0 0 40px rgba(201,168,76,0.3);
+        }
+        .subtitle {
+            font-style: italic;
+            color: var(--text-dim);
+            font-size: 1rem;
+            margin-top: 6px;
+            letter-spacing: 0.05em;
+        }
+
+        /* ─── WALLET BAR ─── */
+        .wallet-bar {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1300px;
+            margin: 20px auto;
+            padding: 12px 24px;
+            background: var(--dark2);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+        }
+        .wallet-info { display: flex; align-items: center; gap: 12px; }
+        .wallet-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--text-dim);
+            transition: background 0.3s;
+        }
+        .wallet-dot.connected { background: #4caf50; box-shadow: 0 0 8px #4caf50; }
+        .wallet-address {
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: var(--gold);
+        }
+        .connect-btn {
+            font-family: 'Cinzel', serif;
+            font-size: 0.75rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--dark0);
+            background: linear-gradient(135deg, var(--gold), var(--gold2));
+            border: none;
+            padding: 9px 22px;
+            border-radius: 2px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 700;
+        }
+        .connect-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .connect-btn:disabled { background: var(--dark4); color: var(--text-dim); cursor: default; transform: none; }
+
+        /* ─── LAYOUT ─── */
+        .main {
+            position: relative;
+            z-index: 1;
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 0 20px 60px;
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 24px;
+            align-items: start;
+        }
+        @media (max-width: 960px) {
+            .main { grid-template-columns: 1fr; }
+        }
+
+        /* ─── SECTION HEADINGS ─── */
+        .panel-title {
+            font-family: 'Cinzel', serif;
+            font-size: 0.7rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .panel-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, var(--border), transparent);
+        }
+
+        /* ─── SLOT GRID ─── */
+        .slots-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px;
+        }
+
+        .slot-card {
+            background: var(--dark2);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+        .slot-card:hover { border-color: rgba(201,168,76,0.3); }
+
+        .slot-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+        }
+        .slot-icon { font-size: 1.1rem; }
+        .slot-label {
+            font-family: 'Cinzel', serif;
+            font-size: 0.65rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--gold);
+        }
+        .slot-biome-tag {
+            margin-left: auto;
+            font-size: 0.6rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            padding: 2px 8px;
+            border-radius: 2px;
+            font-family: 'Cinzel', serif;
+        }
+
+        .slot-body { padding: 12px 14px; }
+
+        .field-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .field-label {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            min-width: 42px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+        select {
+            flex: 1;
+            background: var(--dark3);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 6px 8px;
+            font-family: 'Crimson Pro', serif;
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: border-color 0.2s;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a6e5c'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            padding-right: 24px;
+        }
+        select:focus { outline: none; border-color: var(--gold); }
+
+        .item-preview-bar {
+            margin-top: 8px;
+            padding: 7px 10px;
+            background: var(--dark1);
+            border-left: 2px solid var(--gold);
+            font-size: 0.82rem;
+            color: var(--gold2);
+            font-style: italic;
+            min-height: 32px;
+            border-radius: 0 3px 3px 0;
+        }
+
+        /* ─── BIOME COLORS ─── */
+        .biome-head   .slot-biome-tag { background: rgba(107,63,160,0.25); color: #b07fe0; }
+        .biome-chest  .slot-biome-tag { background: rgba(160,64,64,0.25);  color: #e07f7f; }
+        .biome-hand   .slot-biome-tag { background: rgba(201,168,76,0.2);  color: var(--gold); }
+        .biome-foot   .slot-biome-tag { background: rgba(58,122,74,0.25);  color: #7fd49a; }
+
+        .biome-head   .slot-header { border-bottom-color: rgba(107,63,160,0.3); }
+        .biome-chest  .slot-header { border-bottom-color: rgba(160,64,64,0.3); }
+        .biome-hand   .slot-header { border-bottom-color: rgba(201,168,76,0.2); }
+        .biome-foot   .slot-header { border-bottom-color: rgba(58,122,74,0.3); }
+
+        .biome-head   .item-preview-bar { border-left-color: #b07fe0; color: #c9a8e8; }
+        .biome-chest  .item-preview-bar { border-left-color: #e07f7f; color: #e8c0c0; }
+        .biome-hand   .item-preview-bar { border-left-color: var(--gold); color: var(--gold2); }
+        .biome-foot   .item-preview-bar { border-left-color: #7fd49a; color: #a8e4b8; }
+
+        /* ─── RIGHT PANEL ─── */
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            position: sticky;
+            top: 20px;
+        }
+
+        .panel-box {
+            background: var(--dark2);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 18px;
+        }
+
+        /* Token identity */
+        .identity-field {
+            margin-bottom: 14px;
+        }
+        .identity-field label {
+            display: block;
+            font-family: 'Cinzel', serif;
+            font-size: 0.6rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 5px;
+        }
+        .identity-field input,
+        .identity-field textarea {
+            width: 100%;
+            background: var(--dark3);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 8px 10px;
+            font-family: 'Crimson Pro', serif;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+            resize: none;
+        }
+        .identity-field input:focus,
+        .identity-field textarea:focus {
+            outline: none;
+            border-color: var(--gold);
+        }
+        .identity-field input::placeholder,
+        .identity-field textarea::placeholder {
+            color: var(--text-dim);
+            font-style: italic;
+        }
+        .char-counter {
+            text-align: right;
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            margin-top: 3px;
+            transition: color 0.2s;
+        }
+        .char-counter.warn  { color: var(--ember); }
+        .char-counter.words { margin-left: 4px; }
+
+        /* Summary */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+        .summary-item {
+            background: var(--dark1);
+            border-radius: 3px;
+            padding: 7px 9px;
+        }
+        .summary-item .s-slot {
+            font-size: 0.6rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            font-family: 'Cinzel', serif;
+        }
+        .summary-item .s-name {
+            font-size: 0.78rem;
+            color: var(--text);
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Mint supply */
+        .supply-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.82rem;
+        }
+        .supply-row:last-child { border-bottom: none; }
+        .supply-label { color: var(--text-dim); }
+        .supply-val { font-family: 'Cinzel', serif; font-size: 0.75rem; color: var(--gold); }
+
+        /* Mint button */
+        .mint-btn {
+            width: 100%;
+            padding: 14px;
+            font-family: 'Cinzel', serif;
+            font-size: 0.85rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--dark0);
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold2) 50%, var(--gold) 100%);
+            background-size: 200% 100%;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .mint-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%);
+            transform: translateX(-100%);
+            transition: transform 0.4s;
+        }
+        .mint-btn:hover:not(:disabled)::before { transform: translateX(100%); }
+        .mint-btn:hover:not(:disabled) { background-position: 100% 0; filter: brightness(1.05); transform: translateY(-1px); box-shadow: 0 6px 24px rgba(201,168,76,0.3); }
+        .mint-btn:disabled { background: var(--dark4); color: var(--text-dim); cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* Status */
+        .status-box {
+            margin-top: 10px;
+            padding: 10px 14px;
+            border-radius: 3px;
+            font-size: 0.85rem;
+            min-height: 42px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--dark1);
+            border: 1px solid var(--border);
+        }
+        .status-box.success { border-color: #4caf50; color: #4caf50; }
+        .status-box.error   { border-color: var(--ember); color: var(--ember); }
+        .status-box.loading { border-color: var(--gold); color: var(--text); }
+
+        .spinner {
+            width: 16px; height: 16px;
+            border: 2px solid rgba(201,168,76,0.2);
+            border-top-color: var(--gold);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            flex-shrink: 0;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Tx result */
+        .tx-result {
+            display: none;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .tx-result.show { display: block; }
+        .tx-link {
+            display: inline-block;
+            font-family: 'Cinzel', serif;
+            font-size: 0.7rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--gold);
+            border: 1px solid var(--gold);
+            padding: 8px 18px;
+            border-radius: 2px;
+            text-decoration: none;
+            margin: 6px 4px;
+            transition: all 0.2s;
+        }
+        .tx-link:hover { background: rgba(201,168,76,0.1); }
+
+        /* Randomize */
+        .action-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .ghost-btn {
+            flex: 1;
+            padding: 9px 14px;
+            font-family: 'Cinzel', serif;
+            font-size: 0.65rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .ghost-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+        /* Divider */
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border), transparent);
+            margin: 16px 0;
+        }
+
+        /* Supply badge */
+        .supply-badge {
+            display: inline-block;
+            font-size: 0.65rem;
+            font-family: 'Cinzel', serif;
+            padding: 2px 7px;
+            border-radius: 10px;
+            background: rgba(201,168,76,0.12);
+            color: var(--gold);
+            border: 1px solid rgba(201,168,76,0.2);
+            margin-left: 6px;
+        }
+
+        /* Token ID display */
+        .token-id-badge {
+            font-family: 'Cinzel', serif;
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: var(--gold);
+            text-align: center;
+            padding: 10px;
+            text-shadow: 0 0 20px rgba(201,168,76,0.4);
+        }
+    </style>
+</head>
+<body>
+
+<!-- WALLET BAR -->
+<div class="wallet-bar">
+    <div class="wallet-info">
+        <div class="wallet-dot" id="walletDot"></div>
+        <span id="walletStatus">Not connected</span>
+        <span class="wallet-address" id="walletAddress"></span>
+    </div>
+    <button class="connect-btn" id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
+</div>
+
+<!-- HEADER -->
+<header>
+    <span class="logo-glyph">⚔️</span>
+    <h1>LootGear</h1>
+    <p class="subtitle">Forge your equipment. Claim your legend.</p>
+</header>
+
+<div class="main">
+
+    <!-- LEFT: SLOT CONFIGURATOR -->
+    <div>
+        <div class="action-row">
+            <button class="ghost-btn" onclick="randomizeAll()">🎲 Randomize All</button>
+            <button class="ghost-btn" onclick="clearAll()">✕ Clear</button>
+        </div>
+
+        <div class="panel-title">🪖 Head Armour <span class="supply-badge">15 items</span></div>
+        <div class="slots-grid" id="headSlots"></div>
+
+        <div class="divider"></div>
+        <div class="panel-title">🥋 Chest Armour <span class="supply-badge">16 items</span></div>
+        <div class="slots-grid" id="chestSlots"></div>
+
+        <div class="divider"></div>
+        <div class="panel-title">🧤 Hand Armour <span class="supply-badge">15 items</span></div>
+        <div class="slots-grid" id="handSlots"></div>
+
+        <div class="divider"></div>
+        <div class="panel-title">👢 Foot Armour <span class="supply-badge">15 items</span></div>
+        <div class="slots-grid" id="footSlots"></div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="right-panel">
+
+        <!-- Token Identity -->
+        <div class="panel-box">
+            <div class="panel-title">Token Identity</div>
+
+            <div class="identity-field">
+                <label>Token Name <span style="color:var(--ember)">*</span></label>
+                <input
+                    type="text"
+                    id="tokenName"
+                    maxlength="50"
+                    placeholder="e.g. Shadowbane Helm"
+                    oninput="updateCharCount('tokenName','nameCounter',50,'chars'); updateSummary()"
+                >
+                <div class="char-counter" id="nameCounter">0 / 50 chars</div>
+            </div>
+
+            <div class="identity-field">
+                <label>Description <span style="color:var(--text-dim)">(optional · max 30 words · 280 chars)</span></label>
+                <textarea
+                    id="tokenDesc"
+                    rows="3"
+                    maxlength="280"
+                    placeholder="A brief flavour text for this piece of gear…"
+                    oninput="updateDescCount()"
+                ></textarea>
+                <div style="display:flex;justify-content:space-between">
+                    <div class="char-counter words" id="wordCounter">0 / 30 words</div>
+                    <div class="char-counter" id="descCounter">0 / 280 chars</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slot Selector -->
+        <div class="panel-box">
+            <div class="panel-title">Select Slot to Mint</div>
+            <div class="field-row">
+                <div class="field-label">Slot</div>
+                <select id="selectedBodyPart" onchange="updateSummary()">
+                    <option value="">— choose a body part —</option>
+                    <option value="0">🪖 Head</option>
+                    <option value="1">🥋 Chest</option>
+                    <option value="2">🧤 Hand</option>
+                    <option value="3">👢 Foot</option>
+                </select>
+            </div>
+            <div class="field-row" id="itemSelectRow" style="display:none">
+                <div class="field-label">Item</div>
+                <select id="selectedItem" onchange="updateSummary()"></select>
+            </div>
+        </div>
+
+        <!-- Mint Summary -->
+        <div class="panel-box" id="summaryBox" style="display:none">
+            <div class="panel-title">Mint Summary</div>
+            <div class="summary-grid" id="summaryGrid"></div>
+        </div>
+
+        <!-- Supply Info -->
+        <div class="panel-box" id="supplyBox" style="display:none">
+            <div class="panel-title">Supply</div>
+            <div id="supplyRows"></div>
+        </div>
+
+        <!-- Mint Action -->
+        <div class="panel-box">
+            <div class="panel-title">Forge</div>
+            <button class="mint-btn" id="mintBtn" onclick="doMint()" disabled>Connect Wallet to Mint</button>
+            <div class="status-box" id="statusBox">Configure your gear above</div>
+            <div class="tx-result" id="txResult">
+                <div class="token-id-badge" id="mintedId"></div>
+                <a class="tx-link" id="scanLink" href="#" target="_blank">View on BaseScan</a>
+                <a class="tx-link" id="seaLink" href="#" target="_blank">View on OpenSea</a>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+// ─── CONTRACT ───────────────────────────────────────────────────
+const CONTRACT_ADDRESS = "0x27E283E7099528c369A89Fad6C52663313d732FB"; // ← replace after deploy
+const CONTRACT_ABI = [
+    "function mint(string calldata name, string calldata description, uint8 bodyPart, uint8 itemType) external returns (uint256)",
+    "function getMintCount(uint8 itemType) external view returns (uint256)",
+    "function getRemainingSupply(uint8 itemType) external view returns (uint256)",
+    "function getToken(uint256 tokenId) external view returns (string memory name, string memory description, address owner, uint8 bodyPart, uint8 itemType, uint256 mintNumber)",
+    "function totalSupply() external view returns (uint256)",
+    "event Minted(address indexed to, uint256 indexed tokenId, uint8 indexed bodyPart, uint8 itemType, string name, string description, uint256 mintNumber)"
+];
+
+// ─── ITEM DATA ───────────────────────────────────────────────────
+const ITEMS = {
+    head: [
+        { id: 0,  label: "Ancient Helm" },
+        { id: 1,  label: "Ornate Helm" },
+        { id: 2,  label: "Great Helm" },
+        { id: 3,  label: "Full Helm" },
+        { id: 4,  label: "Helm" },
+        { id: 5,  label: "Demon Crown" },
+        { id: 6,  label: "Dragon's Crown" },
+        { id: 7,  label: "Crown" },
+        { id: 8,  label: "War Cap" },
+        { id: 9,  label: "Leather Cap" },
+        { id: 10, label: "Cap" },
+        { id: 11, label: "Divine Hood" },
+        { id: 12, label: "Silk Hood" },
+        { id: 13, label: "Linen Hood" },
+        { id: 14, label: "Hood" }
+    ],
+    chest: [
+        { id: 15, label: "Divine Robe" },
+        { id: 16, label: "Silk Robe" },
+        { id: 17, label: "Ragged Robe" },
+        { id: 18, label: "Linen Robe" },
+        { id: 19, label: "Robe" },
+        { id: 20, label: "Shirt" },
+        { id: 21, label: "Demon Husk" },
+        { id: 22, label: "Dragonskin Armor" },
+        { id: 23, label: "Studded Leather Armor" },
+        { id: 24, label: "Hard Leather Armor" },
+        { id: 25, label: "Leather Armor" },
+        { id: 26, label: "Holy Chestplate" },
+        { id: 27, label: "Ornate Chestplate" },
+        { id: 28, label: "Plate Mail" },
+        { id: 29, label: "Chain Mail" },
+        { id: 30, label: "Ring Mail" }
+    ],
+    hand: [
+        { id: 31, label: "Holy Gauntlets" },
+        { id: 32, label: "Ornate Gauntlets" },
+        { id: 33, label: "Gauntlets" },
+        { id: 34, label: "Heavy Gloves" },
+        { id: 35, label: "Demon's Hands" },
+        { id: 36, label: "Dragonskin Gloves" },
+        { id: 37, label: "Studded Leather Gloves" },
+        { id: 38, label: "Hard Leather Gloves" },
+        { id: 39, label: "Leather Gloves" },
+        { id: 40, label: "Chain Gloves" },
+        { id: 41, label: "Divine Gloves" },
+        { id: 42, label: "Silk Gloves" },
+        { id: 43, label: "Wool Gloves" },
+        { id: 44, label: "Linen Gloves" },
+        { id: 45, label: "Gloves" }
+    ],
+    foot: [
+        { id: 46, label: "Holy Greaves" },
+        { id: 47, label: "Ornate Greaves" },
+        { id: 48, label: "Greaves" },
+        { id: 49, label: "Heavy Boots" },
+        { id: 50, label: "Chain Boots" },
+        { id: 51, label: "Demonhide Boots" },
+        { id: 52, label: "Dragonskin Boots" },
+        { id: 53, label: "Studded Leather Boots" },
+        { id: 54, label: "Hard Leather Boots" },
+        { id: 55, label: "Leather Boots" },
+        { id: 56, label: "Divine Slippers" },
+        { id: 57, label: "Silk Slippers" },
+        { id: 58, label: "Wool Shoes" },
+        { id: 59, label: "Linen Shoes" },
+        { id: 60, label: "Shoes" }
+    ]
+};
+
+const BODY_PART_KEY = { 0: 'head', 1: 'chest', 2: 'hand', 3: 'foot' };
+const BODY_PART_ICON = { head: '🪖', chest: '🥋', hand: '🧤', foot: '👢' };
+const BODY_PART_LABEL = { head: 'Head', chest: 'Chest', hand: 'Hand', foot: 'Foot' };
+const BIOME_COLOR = { head: 'biome-head', chest: 'biome-chest', hand: 'biome-hand', foot: 'biome-foot' };
+const BIOME_LABEL = { head: 'Head', chest: 'Chest', hand: 'Hand', foot: 'Foot' };
+
+// ─── STATE ───────────────────────────────────────────────────────
+let provider, signer, contract, userAddress;
+
+// ─── BUILD UI ────────────────────────────────────────────────────
+function buildSlotCards() {
+    Object.entries(ITEMS).forEach(([part, items]) => {
+        const container = document.getElementById(`${part}Slots`);
+        // One card per slot group showing preview of selected item
+        const card = document.createElement('div');
+        card.className = `slot-card ${BIOME_COLOR[part]}`;
+        card.id = `card-${part}`;
+        card.innerHTML = `
+            <div class="slot-header">
+                <span class="slot-icon">${BODY_PART_ICON[part]}</span>
+                <span class="slot-label">${BODY_PART_LABEL[part]}</span>
+                <span class="slot-biome-tag">${BIOME_LABEL[part]}</span>
+            </div>
+            <div class="slot-body">
+                <div class="field-row">
+                    <span class="field-label">Item</span>
+                    <select id="preview-${part}" onchange="onSlotChange('${part}')">
+                        ${items.map(it => `<option value="${it.id}">${it.label}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="item-preview-bar" id="bar-${part}">${items[0].label}</div>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+function onSlotChange(part) {
+    const sel = document.getElementById(`preview-${part}`);
+    const label = sel.options[sel.selectedIndex].text;
+    document.getElementById(`bar-${part}`).textContent = label;
+    updateSummary();
+}
+
+// ─── BODY PART → ITEM DROPDOWN ────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    buildSlotCards();
+    updateSummary();
+});
+
+document.getElementById('selectedBodyPart').addEventListener('change', function() {
+    const part = BODY_PART_KEY[this.value];
+    const itemRow = document.getElementById('itemSelectRow');
+    const itemSel = document.getElementById('selectedItem');
+
+    if (!part) {
+        itemRow.style.display = 'none';
+        return;
+    }
+
+    itemRow.style.display = 'flex';
+    itemSel.innerHTML = ITEMS[part].map(it =>
+        `<option value="${it.id}">${it.label}</option>`
+    ).join('');
+
+    // Sync with left panel selection
+    const leftSel = document.getElementById(`preview-${part}`);
+    if (leftSel) itemSel.value = leftSel.value;
+
+    updateSummary();
+    fetchSupply();
+});
+
+document.getElementById('selectedItem').addEventListener('change', function() {
+    const bp = document.getElementById('selectedBodyPart').value;
+    const part = BODY_PART_KEY[bp];
+    if (!part) return;
+
+    // Sync left panel
+    const leftSel = document.getElementById(`preview-${part}`);
+    if (leftSel) {
+        leftSel.value = this.value;
+        onSlotChange(part);
+    }
+    fetchSupply();
+});
+
+// ─── CHAR / WORD COUNTERS ─────────────────────────────────────
+function updateCharCount(inputId, counterId, max, unit) {
+    const el = document.getElementById(inputId);
+    const counter = document.getElementById(counterId);
+    const len = el.value.length;
+    counter.textContent = `${len} / ${max} ${unit}`;
+    counter.classList.toggle('warn', len > max * 0.85);
+}
+
+function countWords(str) {
+    if (!str.trim()) return 0;
+    return str.trim().split(/\s+/).length;
+}
+
+function updateDescCount() {
+    const ta = document.getElementById('tokenDesc');
+    const chars = ta.value.length;
+    const words = countWords(ta.value);
+
+    const wc = document.getElementById('wordCounter');
+    const dc = document.getElementById('descCounter');
+
+    wc.textContent = `${words} / 30 words`;
+    dc.textContent = `${chars} / 280 chars`;
+
+    wc.classList.toggle('warn', words > 27);
+    dc.classList.toggle('warn', chars > 250);
+    updateSummary();
+}
+
+// ─── SUMMARY ─────────────────────────────────────────────────
+function updateSummary() {
+    const bp = document.getElementById('selectedBodyPart').value;
+    const part = BODY_PART_KEY[bp];
+    const name = document.getElementById('tokenName').value.trim();
+    const itemSelEl = document.getElementById('selectedItem');
+
+    const summaryBox = document.getElementById('summaryBox');
+    const summaryGrid = document.getElementById('summaryGrid');
+
+    if (!part || !name) {
+        summaryBox.style.display = 'none';
+        return;
+    }
+
+    const itemLabel = itemSelEl.options[itemSelEl.selectedIndex]?.text || '';
+    summaryBox.style.display = 'block';
+    summaryGrid.innerHTML = `
+        <div class="summary-item">
+            <div class="s-slot">Name</div>
+            <div class="s-name">${name || '—'}</div>
+        </div>
+        <div class="summary-item">
+            <div class="s-slot">Slot</div>
+            <div class="s-name">${BODY_PART_ICON[part]} ${BODY_PART_LABEL[part]}</div>
+        </div>
+        <div class="summary-item" style="grid-column:1/-1">
+            <div class="s-slot">Item</div>
+            <div class="s-name">${itemLabel}</div>
+        </div>
+    `;
+}
+
+// ─── SUPPLY FETCH ─────────────────────────────────────────────
+async function fetchSupply() {
+    const supplyBox = document.getElementById('supplyBox');
+    const supplyRows = document.getElementById('supplyRows');
+    const bp = document.getElementById('selectedBodyPart').value;
+    const part = BODY_PART_KEY[bp];
+
+    if (!part || !contract) {
+        supplyBox.style.display = 'none';
+        return;
+    }
+
+    supplyBox.style.display = 'block';
+    supplyRows.innerHTML = '<div style="color:var(--text-dim);font-size:0.8rem">Loading supply…</div>';
+
+    try {
+        const items = ITEMS[part];
+        const rows = await Promise.all(items.map(async it => {
+            const minted = await contract.getMintCount(it.id);
+            const remaining = 1000 - Number(minted);
+            return { label: it.label, minted: Number(minted), remaining };
+        }));
+
+        supplyRows.innerHTML = rows.map(r => `
+            <div class="supply-row">
+                <span class="supply-label">${r.label}</span>
+                <span class="supply-val">${r.minted} / 1000</span>
+            </div>
+        `).join('');
+    } catch(e) {
+        supplyRows.innerHTML = '<div style="color:var(--text-dim);font-size:0.8rem">Connect wallet to view supply</div>';
+    }
+}
+
+// ─── RANDOMIZE ────────────────────────────────────────────────
+function randomizeAll() {
+    Object.keys(ITEMS).forEach(part => {
+        const items = ITEMS[part];
+        const sel = document.getElementById(`preview-${part}`);
+        const pick = items[Math.floor(Math.random() * items.length)];
+        sel.value = pick.id;
+        onSlotChange(part);
+    });
+}
+
+function clearAll() {
+    Object.keys(ITEMS).forEach(part => {
+        const sel = document.getElementById(`preview-${part}`);
+        sel.selectedIndex = 0;
+        onSlotChange(part);
+    });
+    document.getElementById('tokenName').value = '';
+    document.getElementById('tokenDesc').value = '';
+    document.getElementById('nameCounter').textContent = '0 / 50 chars';
+    document.getElementById('wordCounter').textContent = '0 / 30 words';
+    document.getElementById('descCounter').textContent = '0 / 280 chars';
+    document.getElementById('selectedBodyPart').value = '';
+    document.getElementById('itemSelectRow').style.display = 'none';
+    updateSummary();
+}
+
+// ─── WALLET ───────────────────────────────────────────────────
+async function connectWallet() {
+    if (typeof window.ethereum === 'undefined') {
+        alert('Please install MetaMask.');
+        return;
+    }
+
+    try {
+        // Base Mainnet — chainId 8453 (0x2105)
+        const baseChain = {
+            chainId: '0x2105',
+            chainName: 'Base',
+            nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+            rpcUrls: ['https://mainnet.base.org'],
+            blockExplorerUrls: ['https://basescan.org']
+        };
+
+        try {
+            await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: baseChain.chainId }]
+            });
+        } catch (se) {
+            if (se.code === 4902) {
+                await window.ethereum.request({
+                    method: 'wallet_addEthereumChain',
+                    params: [baseChain]
+                });
+            } else throw se;
+        }
+
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        userAddress = accounts[0];
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        signer = provider.getSigner();
+        contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+        document.getElementById('walletDot').classList.add('connected');
+        document.getElementById('walletStatus').textContent = 'Connected';
+        document.getElementById('walletAddress').textContent =
+            userAddress.slice(0, 6) + '…' + userAddress.slice(-4);
+        document.getElementById('connectBtn').textContent = 'Connected';
+        document.getElementById('connectBtn').disabled = true;
+        document.getElementById('mintBtn').disabled = false;
+        document.getElementById('mintBtn').textContent = '⚔️ Forge Gear';
+        setStatus('Wallet connected. Ready to forge.', '');
+
+        window.ethereum.on('accountsChanged', a => a.length ? location.reload() : location.reload());
+        window.ethereum.on('chainChanged', () => location.reload());
+
+    } catch (err) {
+        setStatus('Connection failed: ' + err.message, 'error');
+    }
+}
+
+// ─── MINT ─────────────────────────────────────────────────────
+async function doMint() {
+    const name = document.getElementById('tokenName').value.trim();
+    const desc = document.getElementById('tokenDesc').value.trim();
+    const bpVal = document.getElementById('selectedBodyPart').value;
+    const itemVal = document.getElementById('selectedItem').value;
+
+    // ── Client-side validation ──
+    if (!name) return setStatus('Token name is required.', 'error');
+    if (name.length > 50) return setStatus('Name exceeds 50 characters.', 'error');
+    if (desc && countWords(desc) > 30) return setStatus('Description exceeds 30 words.', 'error');
+    if (desc && desc.length > 280) return setStatus('Description exceeds 280 characters.', 'error');
+    if (bpVal === '') return setStatus('Please select a body part to mint.', 'error');
+    if (!itemVal) return setStatus('Please select an item.', 'error');
+
+    const bodyPart = parseInt(bpVal);
+    const itemType = parseInt(itemVal);
+
+    const mintBtn = document.getElementById('mintBtn');
+    mintBtn.disabled = true;
+    document.getElementById('txResult').classList.remove('show');
+
+    try {
+        setStatus('<div class="spinner"></div> Preparing transaction…', 'loading');
+
+        const tx = await contract.mint(name, desc, bodyPart, itemType);
+
+        setStatus('<div class="spinner"></div> Forging… waiting for confirmation', 'loading');
+        const receipt = await tx.wait();
+
+        // Parse Minted event for tokenId
+        const iface = new ethers.utils.Interface(CONTRACT_ABI);
+        let tokenId = null;
+        for (const log of receipt.logs) {
+            try {
+                const parsed = iface.parseLog(log);
+                if (parsed.name === 'Minted') {
+                    tokenId = parsed.args.tokenId.toString();
+                    break;
+                }
+            } catch (_) {}
+        }
+
+        const idStr = tokenId !== null ? `#${tokenId}` : '';
+        setStatus(`✅ Forged successfully! Token ${idStr}`, 'success');
+
+        if (tokenId !== null) {
+            document.getElementById('mintedId').textContent = `Token ${idStr}`;
+            document.getElementById('scanLink').href =
+                `https://basescan.org/tx/${receipt.transactionHash}`;
+            document.getElementById('seaLink').href =
+                `https://opensea.io/assets/base/${CONTRACT_ADDRESS}/${tokenId}`;
+            document.getElementById('txResult').classList.add('show');
+        }
+
+        mintBtn.disabled = false;
+        mintBtn.textContent = '⚔️ Forge Again';
+
+        // Refresh supply
+        fetchSupply();
+
+    } catch (err) {
+        mintBtn.disabled = false;
+        let msg = 'Mint failed';
+        if (err.code === 4001) msg = 'Transaction rejected.';
+        else if (err.reason) msg = err.reason;
+        else if (err.data?.message) msg = err.data.message;
+        else if (err.message) msg = err.message.slice(0, 120);
+        setStatus('❌ ' + msg, 'error');
+    }
+}
+
+function setStatus(html, type) {
+    const box = document.getElementById('statusBox');
+    box.innerHTML = html;
+    box.className = 'status-box ' + type;
+}
+
+// ─── AUTO CONNECT ────────────────────────────────────────────
+window.addEventListener('load', async () => {
+    buildSlotCards && null; // already called via DOMContentLoaded
+    if (window.ethereum) {
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' }).catch(() => []);
+        if (accounts.length > 0) connectWallet();
+    }
+});
+</script>
+</body>
+</html>
