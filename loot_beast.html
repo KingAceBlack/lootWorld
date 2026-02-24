@@ -158,7 +158,7 @@
   const NFT_CONTRACT   = "0x0471e7df1c7af2c049326eb838b2760e9749adf5138afff20dc1439dde6e0a15";
   const VAULT_CONTRACT = "0x027d9dd74e2b39b8da20ccfeccf9c15bdbfa41a8ae0b3b303c0b2af0b897034e";
   // Replace with your Alchemy key
-  const RPC_URL        = "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_9/YOUR_ALCHEMY_KEY";
+  const RPC_URL        = "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_10/CJMHx8Zr5oQbMTXXvtxfY";
 
   const TRANSFER_KEY = "0x0099cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9";
 
@@ -206,7 +206,7 @@
     const zero="0x"+"0".repeat(64);
     const ownership={};
 
-    // Mint events (from=0x0)
+    // Step 1: all mint events build initial ownership map
     try{
       let ct=null;
       do{
@@ -222,7 +222,7 @@
       }while(ct);
     }catch(e){console.warn("Mint events:",e.message);}
 
-    // Transfer-out events (from=me)
+    // Step 2: all transfers FROM me update ownership (covers sending to vault or others)
     try{
       let ct=null;
       do{
@@ -238,31 +238,11 @@
       }while(ct);
     }catch(e){console.warn("Transfer-out:",e.message);}
 
-    // Also include tokens locked in vault (vault owns them on-chain, but user locked them)
-    // Fetch transfer events where to=vault
+    // Step 3: anything now sitting at vault address = locked by me
     const vaultNorm=normAddr(VAULT_CONTRACT);
-    try{
-      let ct=null;
-      do{
-        const filter={from_block:{block_number:0},to_block:"latest",address:NFT_CONTRACT,keys:[[TRANSFER_KEY],[myNorm]],chunk_size:1000};
-        if(ct)filter.continuation_token=ct;
-        const res=await rpc("starknet_getEvents",{filter});
-        for(const ev of (res.events||[])){
-          const to=normAddr(ev.keys[2]||"0x0");
-          const tokenId=BigInt(ev.keys[3]||"0x0").toString();
-          // If transferred TO vault, mark as vault-owned but originally mine
-          if(tokenId!=="0"&&to===vaultNorm){
-            ownership[tokenId]="vault:"+myNorm;
-          }
-        }
-        ct=res.continuation_token||null;
-      }while(ct);
-    }catch(e){}
-
-    // Return tokens owned by me OR locked in vault by me
     return Object.entries(ownership)
-      .filter(([,owner])=>owner===myNorm||owner==="vault:"+myNorm)
-      .map(([id,owner])=>({id,locked:owner.startsWith("vault:")}));
+      .filter(([,owner])=>owner===myNorm||owner===vaultNorm)
+      .map(([id,owner])=>({id,locked:owner===vaultNorm}));
   }
 
   // get_beast
