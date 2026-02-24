@@ -288,7 +288,7 @@
   // ── Sync locked beast to Supabase via API ─────────────────────────────────────
   async function syncBeastToAPI(tokenId, beast) {
     try {
-      await fetch("https://ftdBackend.vercel.app/api/beasts", {
+      await fetch("https://ftd-backend.vercel.app/api/beasts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
