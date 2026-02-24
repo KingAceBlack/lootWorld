@@ -190,14 +190,17 @@
     const ownership = {}; // tokenId -> current owner (normalised)
 
     for (const ev of mintEvents) {
-      try {
-        const to = normAddr(ev.keys[2] || "0x0");
-        const low  = BigInt(ev.data[0] || "0x0");
-        const high = BigInt(ev.data[1] || "0x0");
-        const tokenId = (low + (high << 128n)).toString();
-        if (tokenId !== "0") ownership[tokenId] = to;
-      } catch(e) {}
-    }
+  try {
+    console.log("EVENT keys:", ev.keys);
+    console.log("EVENT data:", ev.data);
+    const to = normAddr(ev.keys[2] || "0x0");
+    const low  = BigInt(ev.data[0] || "0x0");
+    const high = BigInt(ev.data[1] || "0x0");
+    const tokenId = (low + (high << 128n)).toString();
+    console.log("to:", to, "| myNorm:", myNorm, "| match:", to === myNorm, "| tokenId:", tokenId);
+    if (tokenId !== "0") ownership[tokenId] = to;
+  } catch(e) { console.log("Event parse error:", e); }
+}
 
     // 3. Fetch all Transfer events where from = myAddress (sent away)
     //    to cancel out tokens no longer owned
