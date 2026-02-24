@@ -122,10 +122,10 @@
 </footer>
 <script>
   const CONTRACT = "0x0471e7df1c7af2c049326eb838b2760e9749adf5138afff20dc1439dde6e0a15";
-  const RPC_URL = "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_10/CJMHx8Zr5oQbMTXXvtxfY";
+  // REPLACE with your Alchemy API key URL
+  const RPC_URL  = "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_10/CJMHx8Zr5oQbMTXXvtxfY";
 
-  // ERC-721 Transfer event key (starknet keccak of "Transfer")
-  // keys layout: [selector, from, to] — data layout: [token_id_low, token_id_high]
+  // ERC-721 Transfer event selector
   const TRANSFER_KEY = "0x0099cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9";
 
   const BEAST_NAMES = ["","Warlock","Typhon","Jiangshi","Anansi","Basilisk","Gorgon","Kitsune","Lich","Chimera","Wendigo","Rakshasa","Werewolf","Banshee","Draugr","Vampire","Goblin","Skeleton","Orc","Revenant","Ghoul","Pixie","Gnome","Djinn","Fairy","Leprechaun","Kelpie","Sprite","Medusa","Jotunn","Minotaur","Kraken","Colossus","Balrog","Leviathan","Tarrasque","Titan","Nephilim","Behemoth","Hydra","Juggernaut","Fenrir","Ammit","Ifrit","Oni","Nue","Skinwalker","Chupacabra","Weretiger","Wyvern","Roc","Harpy","Pegasus","Hippogriff","Manticore","Cockatrice"];
@@ -151,135 +151,91 @@
     return rpc("starknet_call",{request:{contract_address:CONTRACT,entry_point_selector:selector,calldata},block_id:"latest"});
   }
 
-  // ── Fetch owned tokens via Transfer events ─────────────────────────────
-  // Strategy: fetch Transfer events filtered by [selector, from=0x0] (mints only)
-  // then filter by `to` in JS — only 1 RPC call regardless of collection size.
-  // Also fetch Transfer events [selector, from=myAddress] to track any tokens sent away.
+  // ── Fetch owned tokens via Transfer events ────────────────────────────────
+  // On Starknet ERC-721, ALL Transfer data is in keys (not data):
+  // keys[0]=selector, keys[1]=from, keys[2]=to, keys[3]=token_id_low, keys[4]=token_id_high
   async function fetchOwnedTokens(ownerAddress) {
     const myNorm = normAddr(ownerAddress);
     const zero   = "0x" + "0".repeat(64);
+    const ownership = {};
 
-    // 1. Get all mint events (from = 0x0) for this contract
-    //    keys[0]=selector, keys[1]=from(zero), keys[2]=to(any)
-    let mintEvents = [];
+    // 1. Fetch mint events (from = 0x0)
     try {
       let contToken = null;
       do {
         const filter = {
-          from_block: { block_number: 0 },
-          to_block: "latest",
-          address: CONTRACT,
-          keys: [[TRANSFER_KEY], [zero]],  // only filter selector + from=0
-          chunk_size: 1000,
+          from_block:{block_number:0}, to_block:"latest",
+          address:CONTRACT,
+          keys:[[TRANSFER_KEY],[zero]], // selector + from=0x0
+          chunk_size:1000,
         };
-        if (contToken) filter.continuation_token = contToken;
-        const res = await rpc("starknet_getEvents", { filter });
-        mintEvents = mintEvents.concat(res.events || []);
-        contToken = res.continuation_token || null;
-      } while (contToken);
-    } catch(e) {
-      console.warn("Mint events fetch failed:", e.message);
-    }
-
-    console.log("Total mint events found:", mintEvents.length);
-
-    // 2. Build ownership map from mint events
-    // ERC-721 Transfer on Starknet:
-    //   keys = [selector, from, to]
-    //   data = [token_id_low, token_id_high]
-    const ownership = {}; // tokenId -> current owner (normalised)
-
-    for (const ev of mintEvents) {
-  try {
-    console.log("EVENT keys:", ev.keys);
-    console.log("EVENT data:", ev.data);
-    const to = normAddr(ev.keys[2] || "0x0");
-    const low  = BigInt(ev.data[0] || "0x0");
-    const high = BigInt(ev.data[1] || "0x0");
-    const tokenId = (low + (high << 128n)).toString();
-    console.log("to:", to, "| myNorm:", myNorm, "| match:", to === myNorm, "| tokenId:", tokenId);
-    if (tokenId !== "0") ownership[tokenId] = to;
-  } catch(e) { console.log("Event parse error:", e); }
-}
-
-    // 3. Fetch all Transfer events where from = myAddress (sent away)
-    //    to cancel out tokens no longer owned
-    try {
-      let contToken = null;
-      do {
-        const filter = {
-          from_block: { block_number: 0 },
-          to_block: "latest",
-          address: CONTRACT,
-          keys: [[TRANSFER_KEY], [myNorm]], // from = me
-          chunk_size: 1000,
-        };
-        if (contToken) filter.continuation_token = contToken;
-        const res = await rpc("starknet_getEvents", { filter });
-        for (const ev of (res.events || [])) {
-          try {
-            const to = normAddr(ev.keys[2] || "0x0");
-            const low  = BigInt(ev.data[0] || "0x0");
-            const high = BigInt(ev.data[1] || "0x0");
-            const tokenId = (low + (high << 128n)).toString();
-            // Update ownership to new recipient
-            if (tokenId !== "0") ownership[tokenId] = to;
-          } catch(e) {}
+        if(contToken) filter.continuation_token = contToken;
+        const res = await rpc("starknet_getEvents",{filter});
+        for(const ev of (res.events||[])){
+          // token_id is in keys[3] (low) and keys[4] (high)
+          const to      = normAddr(ev.keys[2]||"0x0");
+          const tokenId = BigInt(ev.keys[3]||"0x0").toString();
+          if(tokenId!=="0") ownership[tokenId] = to;
         }
-        contToken = res.continuation_token || null;
-      } while (contToken);
-    } catch(e) {
-      console.warn("Transfer-out events fetch:", e.message);
-    }
+        contToken = res.continuation_token||null;
+      } while(contToken);
+    } catch(e){ console.warn("Mint events:",e.message); }
 
-    // 4. Return only tokens currently owned by me
-    const owned = Object.entries(ownership)
-      .filter(([,owner]) => owner === myNorm)
-      .map(([id]) => id);
+    // 2. Fetch transfer-out events (from = myAddress) to update ownership
+    try {
+      let contToken = null;
+      do {
+        const filter = {
+          from_block:{block_number:0}, to_block:"latest",
+          address:CONTRACT,
+          keys:[[TRANSFER_KEY],[myNorm]], // selector + from=me
+          chunk_size:1000,
+        };
+        if(contToken) filter.continuation_token = contToken;
+        const res = await rpc("starknet_getEvents",{filter});
+        for(const ev of (res.events||[])){
+          const to      = normAddr(ev.keys[2]||"0x0");
+          const tokenId = BigInt(ev.keys[3]||"0x0").toString();
+          if(tokenId!=="0") ownership[tokenId] = to;
+        }
+        contToken = res.continuation_token||null;
+      } while(contToken);
+    } catch(e){ console.warn("Transfer-out events:",e.message); }
 
-    console.log("Owned token IDs:", owned);
-    return owned;
+    // Return token IDs where current owner = me
+    return Object.entries(ownership)
+      .filter(([,owner])=>owner===myNorm)
+      .map(([id])=>id);
   }
 
   // ── get_beast ─────────────────────────────────────────────────────────────
-  // Try both snake_case and camelCase selectors
   const GET_BEAST_SELS = [
     "0x01a3cd89e72b5e5d9b3a25de7b4a4d41ade5eddc0b42c7b37b7afba61d2d8e4f",
     "0x029ce0933f3f6dd0c5c0a45a7fc87fb96a12af73da5f0da07ead96a9cab8da96",
     "0x02e4263afad30923c891518314c3c95dbe830a16874e8abc5777a9a20b54c76e",
   ];
 
-  async function getBeastData(tokenId) {
-    for (const sel of GET_BEAST_SELS) {
-      try {
-        const res = await callContract(sel, [padHex(tokenId), "0x0"]);
-        if (res && res.length >= 7) {
-          return {
-            id:parseInt(res[0],16), prefix:parseInt(res[1],16), suffix:parseInt(res[2],16),
-            level:parseInt(res[3],16), health:parseInt(res[4],16),
-            shiny:parseInt(res[5],16), animated:parseInt(res[6],16),
-          };
+  async function getBeastData(tokenId){
+    for(const sel of GET_BEAST_SELS){
+      try{
+        const res=await callContract(sel,[padHex(tokenId),"0x0"]);
+        if(res&&res.length>=7){
+          return {id:parseInt(res[0],16),prefix:parseInt(res[1],16),suffix:parseInt(res[2],16),level:parseInt(res[3],16),health:parseInt(res[4],16),shiny:parseInt(res[5],16),animated:parseInt(res[6],16)};
         }
-      } catch(e) {}
+      }catch(e){}
     }
-    // Visual fallback so card still renders
-    const s = parseInt(tokenId);
+    const s=parseInt(tokenId);
     return {id:(s%55)+1,prefix:s%PREFIXES.length,suffix:s%SUFFIXES.length,level:(s%50)+1,health:(s%950)+50,shiny:0,animated:0};
   }
 
   // ── SVG art ───────────────────────────────────────────────────────────────
-  function makeSVG(beast, tokenId) {
-    const shiny  = beast.shiny == 1;
-    const accent = shiny ? "#c9a84c" : "#8b1a1a";
-    const bg     = shiny ? "#1a1500" : "#0e0b08";
-    const hpW    = Math.round(Math.min(beast.health, 1000) / 1000 * 180);
-    const emoji  = EMOJIS[beast.id] || EMOJIS.default;
+  function makeSVG(beast,tokenId){
+    const shiny=beast.shiny==1,accent=shiny?"#c9a84c":"#8b1a1a",bg=shiny?"#1a1500":"#0e0b08";
+    const hpW=Math.round(Math.min(beast.health,1000)/1000*180);
+    const emoji=EMOJIS[beast.id]||EMOJIS.default;
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">'
-      +'<defs><radialGradient id="g'+tokenId+'" cx="50%" cy="40%" r="60%">'
-      +'<stop offset="0%" stop-color="'+accent+'" stop-opacity="0.3"/>'
-      +'<stop offset="100%" stop-color="'+bg+'"/></radialGradient>'
-      +'<filter id="f'+tokenId+'"><feGaussianBlur stdDeviation="5" result="b"/>'
-      +'<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>'
+      +'<defs><radialGradient id="g'+tokenId+'" cx="50%" cy="40%" r="60%"><stop offset="0%" stop-color="'+accent+'" stop-opacity="0.3"/><stop offset="100%" stop-color="'+bg+'"/></radialGradient>'
+      +'<filter id="f'+tokenId+'"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>'
       +'<rect width="300" height="300" fill="url(#g'+tokenId+')"/>'
       +'<rect x="1" y="1" width="298" height="298" fill="none" stroke="'+accent+'" stroke-width="0.5" opacity="0.5"/>'
       +'<line x1="0" y1="20" x2="20" y2="0" stroke="'+accent+'" stroke-width="1" opacity="0.6"/>'
@@ -298,16 +254,14 @@
   }
 
   // ── Render card ───────────────────────────────────────────────────────────
-  function renderCard(tokenId, beast, idx) {
-    const name   = beastLabel(beast.id, beast.prefix, beast.suffix);
-    const svgUrl = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(makeSVG(beast, tokenId));
-    const card   = document.createElement("div");
-    card.className = "beast-card" + (beast.shiny==1?" shiny":"");
-    card.style.animationDelay = (idx*.08)+"s";
-    card.innerHTML =
-      '<div class="beast-art"><img src="'+svgUrl+'" alt="'+name+'"/></div>'
-      +'<div class="beast-info">'
-      +'<div class="beast-token-id">Token #'+tokenId+'</div>'
+  function renderCard(tokenId,beast,idx){
+    const name=beastLabel(beast.id,beast.prefix,beast.suffix);
+    const svgUrl="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(makeSVG(beast,tokenId));
+    const card=document.createElement("div");
+    card.className="beast-card"+(beast.shiny==1?" shiny":"");
+    card.style.animationDelay=(idx*.08)+"s";
+    card.innerHTML='<div class="beast-art"><img src="'+svgUrl+'" alt="'+name+'"/></div>'
+      +'<div class="beast-info"><div class="beast-token-id">Token #'+tokenId+'</div>'
       +'<div class="beast-name">'+name+'</div>'
       +'<div class="beast-stats">'
       +'<div class="stat"><span class="stat-label">Level</span><span class="stat-value">'+beast.level+'</span></div>'
@@ -323,47 +277,32 @@
   }
 
   // ── Load gallery ──────────────────────────────────────────────────────────
-  async function loadBeasts(addr) {
-    const gallery = document.getElementById("gallery");
-    const status  = document.getElementById("status");
-    const empty   = document.getElementById("empty");
-    const divider = document.getElementById("gallery-divider");
-    const counter = document.getElementById("beast-count");
-    gallery.innerHTML="";
-    empty.classList.remove("visible");
-    divider.classList.remove("visible");
-    status.className="";
-    status.innerHTML='<span class="spinner"></span> Fetching your beasts...';
-
-    try {
-      const ids = await fetchOwnedTokens(addr);
-      if (!ids.length) {
-        status.innerHTML="";
-        empty.classList.add("visible");
-        return;
+  async function loadBeasts(addr){
+    const gallery=document.getElementById("gallery"),status=document.getElementById("status");
+    const empty=document.getElementById("empty"),divider=document.getElementById("gallery-divider");
+    const counter=document.getElementById("beast-count");
+    gallery.innerHTML="";empty.classList.remove("visible");divider.classList.remove("visible");
+    status.className="";status.innerHTML='<span class="spinner"></span> Fetching your beasts...';
+    try{
+      const ids=await fetchOwnedTokens(addr);
+      if(!ids.length){status.innerHTML="";empty.classList.add("visible");return;}
+      counter.textContent=ids.length+" Beast"+(ids.length!==1?"s":"")+" Found";
+      divider.classList.add("visible");status.innerHTML="";
+      for(let i=0;i<ids.length;i++){
+        const beast=await getBeastData(ids[i]);
+        gallery.appendChild(renderCard(ids[i],beast,i));
       }
-      counter.textContent = ids.length+" Beast"+(ids.length!==1?"s":"")+" Found";
-      divider.classList.add("visible");
-      status.innerHTML="";
-      for (let i=0; i<ids.length; i++) {
-        const beast = await getBeastData(ids[i]);
-        gallery.appendChild(renderCard(ids[i], beast, i));
-      }
-    } catch(err) {
-      console.error(err);
-      status.className="error";
-      status.textContent="Error: "+err.message;
-    }
+    }catch(err){console.error(err);status.className="error";status.textContent="Error: "+err.message;}
   }
 
   // ── Mint ──────────────────────────────────────────────────────────────────
-  let walletProvider=null, walletAddress=null, pendingBeast=null;
+  let walletProvider=null,walletAddress=null,pendingBeast=null;
 
   function rollBeast(){
     return {id:randInt(1,55),prefix:randInt(0,PREFIXES.length-1),suffix:randInt(0,SUFFIXES.length-1),level:randInt(1,50),health:randInt(50,1000),shiny:Math.random()<.05?1:0,animated:Math.random()<.10?1:0};
   }
 
-  function updatePreview(b) {
+  function updatePreview(b){
     pendingBeast=b;
     document.getElementById("preview-img").src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(makeSVG(b,"?"));
     document.getElementById("preview-name").textContent=beastLabel(b.id,b.prefix,b.suffix);
@@ -376,31 +315,23 @@
       +'<div class="mini-stat">Shiny<span>'+(b.shiny?"Yes":"No")+'</span></div>';
   }
 
-  async function mintBeast() {
-    if (!walletProvider||!walletAddress||!pendingBeast) return;
-    const btn=document.getElementById("mint-btn");
-    const ms=document.getElementById("mint-status");
-    const b=pendingBeast;
-    btn.disabled=true; btn.textContent="Summoning...";
-    ms.className=""; ms.innerHTML='<span class="spinner"></span> Awaiting wallet confirmation...';
-    try {
+  async function mintBeast(){
+    if(!walletProvider||!walletAddress||!pendingBeast)return;
+    const btn=document.getElementById("mint-btn"),ms=document.getElementById("mint-status"),b=pendingBeast;
+    btn.disabled=true;btn.textContent="Summoning...";
+    ms.className="";ms.innerHTML='<span class="spinner"></span> Awaiting wallet confirmation...';
+    try{
       const account=walletProvider.account;
-      if (!account) throw new Error("Wallet account not available");
-      const result=await account.execute({
-        contractAddress:CONTRACT,
-        entrypoint:"mint",
-        calldata:[walletAddress,toHex(b.id),toHex(b.prefix),toHex(b.suffix),toHex(b.level),toHex(b.health),toHex(b.shiny),toHex(b.animated)],
-      });
+      if(!account)throw new Error("Wallet account not available");
+      const result=await account.execute({contractAddress:CONTRACT,entrypoint:"mint",calldata:[walletAddress,toHex(b.id),toHex(b.prefix),toHex(b.suffix),toHex(b.level),toHex(b.health),toHex(b.shiny),toHex(b.animated)]});
       const tx=result.transaction_hash;
       ms.className="success";
       ms.innerHTML='Summoned! <a href="https://sepolia.voyager.online/tx/'+tx+'" target="_blank" style="color:var(--gold)">'+tx.slice(0,18)+'...</a>';
-      updatePreview(rollBeast());
-      btn.textContent="Summon Beast"; btn.disabled=false;
+      updatePreview(rollBeast());btn.textContent="Summon Beast";btn.disabled=false;
       setTimeout(()=>loadBeasts(walletAddress),6000);
-    } catch(err) {
-      console.error(err);
-      ms.className="error"; ms.textContent="Error: "+(err.message||"Transaction failed");
-      btn.disabled=false; btn.textContent="Summon Beast";
+    }catch(err){
+      console.error(err);ms.className="error";ms.textContent="Error: "+(err.message||"Transaction failed");
+      btn.disabled=false;btn.textContent="Summon Beast";
     }
   }
 
@@ -413,26 +344,22 @@
 
   // ── Connect wallet ────────────────────────────────────────────────────────
   document.getElementById("connect-btn").addEventListener("click",async()=>{
-    const btn=document.getElementById("connect-btn");
-    const info=document.getElementById("wallet-info");
-    const status=document.getElementById("status");
-    btn.disabled=true; btn.textContent="Connecting...";
-    try {
+    const btn=document.getElementById("connect-btn"),info=document.getElementById("wallet-info"),status=document.getElementById("status");
+    btn.disabled=true;btn.textContent="Connecting...";
+    try{
       const provider=window.starknet||window.starknet_braavos||window.starknet_argentX||window.braavos||window.argentX;
-      if (!provider) throw new Error("No Starknet wallet found. Install Braavos or ArgentX.");
+      if(!provider)throw new Error("No Starknet wallet found. Install Braavos or ArgentX.");
       await provider.enable({starknetVersion:"v5"});
       const address=provider.selectedAddress||provider.account?.address;
-      if (!address) throw new Error("No account selected in wallet.");
-      walletProvider=provider; walletAddress=address;
-      btn.textContent="Connected";
-      info.textContent=shortAddr(address); info.classList.add("visible");
+      if(!address)throw new Error("No account selected in wallet.");
+      walletProvider=provider;walletAddress=address;
+      btn.textContent="Connected";info.textContent=shortAddr(address);info.classList.add("visible");
       document.getElementById("mint-section").classList.add("visible");
       updatePreview(rollBeast());
       await loadBeasts(address);
-    } catch(err) {
-      console.error(err);
-      status.className="error"; status.textContent="Error: "+err.message;
-      btn.disabled=false; btn.textContent="Connect Wallet";
+    }catch(err){
+      console.error(err);status.className="error";status.textContent="Error: "+err.message;
+      btn.disabled=false;btn.textContent="Connect Wallet";
     }
   });
 </script>
