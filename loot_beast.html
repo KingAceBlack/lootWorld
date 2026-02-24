@@ -158,7 +158,7 @@
   const NFT_CONTRACT   = "0x0471e7df1c7af2c049326eb838b2760e9749adf5138afff20dc1439dde6e0a15";
   const VAULT_CONTRACT = "0x027d9dd74e2b39b8da20ccfeccf9c15bdbfa41a8ae0b3b303c0b2af0b897034e";
   // Replace with your Alchemy key
-  const RPC_URL        = "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_10/CJMHx8Zr5oQbMTXXvtxfY";
+  const RPC_URL        = "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_9/YOUR_ALCHEMY_KEY";
 
   const TRANSFER_KEY = "0x0099cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9";
 
@@ -305,6 +305,33 @@
 
   let walletProvider=null,walletAddress=null,pendingBeast=null;
 
+  // ── Sync locked beast to Supabase via API ─────────────────────────────────────
+  async function syncBeastToAPI(tokenId, beast) {
+    try {
+      await fetch("https://ftdBackend.vercel.app/api/beasts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token_id:  parseInt(tokenId),
+          owner:     walletAddress,
+          name:      beastLabel(beast.id, beast.prefix, beast.suffix),
+          beast_id:  beast.id,
+          prefix:    beast.prefix,
+          suffix:    beast.suffix,
+          level:     beast.level,
+          health:    beast.health,
+          shiny:     beast.shiny === 1,
+          animated:  beast.animated === 1,
+          is_locked: true,
+          locked_at: new Date().toISOString(),
+        }),
+      });
+      console.log("Beast synced to API:", tokenId);
+    } catch(e) {
+      console.warn("API sync failed (non-critical):", e.message);
+    }
+  }
+
   // ── Lock a beast (approve + lock in one multicall) ────────────────────────
   async function lockBeast(tokenId,btn,statusEl){
     const account=walletProvider.account;
@@ -327,6 +354,9 @@
       ]);
       statusEl.className="card-status ok";
       statusEl.innerHTML='<a href="https://sepolia.voyager.online/tx/'+result.transaction_hash+'" target="_blank" style="color:var(--green)">Locked!</a>';
+      // Sync beast data to API
+      const beastData = await getBeastData(tokenId);
+      syncBeastToAPI(tokenId, beastData);
       // Update card visually
       const card=btn.closest(".beast-card");
       card.classList.add("is-locked");
