@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Loot Beast — Gallery</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@400;600&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --gold:   #c9a84c;
+      --gold2:  #f0d070;
+      --dark:   #0a0806;
+      --dark2:  #13100a;
+      --dark3:  #1e1810;
+      --red:    #8b1a1a;
+      --red2:   #c0392b;
+      --text:   #e8dcc8;
+      --muted:  #7a6a50;
+      --border: #2e2416;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--dark);
+      color: var(--text);
+      font-family: 'Cinzel', serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 0%, rgba(139,26,26,0.18) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(201,168,76,0.08) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    header {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      padding: 3.5rem 2rem 2rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-emblem {
+      font-size: 3.5rem;
+      margin-bottom: 0.5rem;
+      animation: pulse-glow 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse-glow {
+      0%,100% { filter: drop-shadow(0 0 18px rgba(201,168,76,0.4)); }
+      50%      { filter: drop-shadow(0 0 36px rgba(201,168,76,0.8)); }
+    }
+
+    h1 {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: clamp(1.8rem, 5vw, 3.2rem);
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold2) 50%, var(--gold) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 0.04em;
+    }
+
+    .subtitle {
+      font-family: 'IM Fell English', serif;
+      font-style: italic;
+      color: var(--muted);
+      font-size: 1rem;
+      margin-top: 0.4rem;
+      letter-spacing: 0.06em;
+    }
+
+    .contract-badge {
+      display: inline-block;
+      margin-top: 1rem;
+      padding: 0.3rem 1rem;
+      border: 1px solid var(--border);
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      background: rgba(255,255,255,0.02);
+    }
+
+    .connect-area {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 2.5rem 2rem;
+    }
+
+    #connect-btn {
+      font-family: 'Cinzel', serif;
+      font-weight: 600;
+      font-size: 0.9rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.9rem 2.8rem;
+      background: transparent;
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+      position: relative;
+    }
+
+    #connect-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(201,168,76,0.15), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    #connect-btn:hover { color: var(--gold2); border-color: var(--gold2); }
+    #connect-btn:hover::before { opacity: 1; }
+    #connect-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    #wallet-info {
+      font-family: 'IM Fell English', serif;
+      font-style: italic;
+      font-size: 0.85rem;
+      color: var(--muted);
+      display: none;
+    }
+    #wallet-info.visible { display: block; }
+
+    #status {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      padding: 0 2rem 1.5rem;
+      font-family: 'IM Fell English', serif;
+      font-style: italic;
+      font-size: 0.95rem;
+      color: var(--muted);
+      min-height: 2rem;
+    }
+    #status.error { color: var(--red2); }
+
+    .divider {
+      position: relative;
+      z-index: 10;
+      display: none;
+      align-items: center;
+      gap: 1rem;
+      padding: 0 2.5rem;
+      margin: 0.5rem auto 1.5rem;
+      max-width: 1400px;
+    }
+    .divider.visible { display: flex; }
+    .divider-line { flex: 1; height: 1px; background: var(--border); }
+    .divider-text { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; white-space: nowrap; }
+
+    #gallery {
+      position: relative;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.8rem;
+      padding: 1rem 2.5rem 4rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .beast-card {
+      background: var(--dark2);
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s ease, border-color 0.3s ease;
+      animation: card-in 0.5s ease both;
+    }
+
+    @keyframes card-in {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .beast-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .beast-card:hover { transform: translateY(-4px); border-color: var(--gold); }
+    .beast-card:hover::before { opacity: 1; }
+
+    .beast-art {
+      width: 100%;
+      aspect-ratio: 1;
+      background: var(--dark3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .beast-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    .beast-card.shiny .beast-art::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, transparent 30%, rgba(201,168,76,0.15) 50%, transparent 70%);
+      animation: shimmer 3s ease-in-out infinite;
+    }
+
+    @keyframes shimmer {
+      0%   { transform: translateX(-100%) rotate(30deg); }
+      100% { transform: translateX(200%) rotate(30deg); }
+    }
+
+    .beast-info { padding: 1.2rem 1.4rem 1.4rem; }
+
+    .beast-token-id {
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 0.3rem;
+    }
+
+    .beast-name {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 0.95rem;
+      color: var(--gold);
+      margin-bottom: 1rem;
+      line-height: 1.3;
+    }
+
+    .beast-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem 1rem;
+    }
+
+    .stat { display: flex; flex-direction: column; gap: 0.15rem; }
+    .stat-label { font-size: 0.6rem; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; }
+    .stat-value { font-family: 'IM Fell English', serif; font-size: 1rem; color: var(--text); }
+
+    .stat-bar { height: 2px; background: var(--border); margin-top: 0.2rem; position: relative; overflow: hidden; }
+    .stat-bar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, var(--red), var(--gold)); }
+
+    .badges { display: flex; gap: 0.4rem; margin-top: 0.9rem; flex-wrap: wrap; }
+    .badge { font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.2rem 0.6rem; border: 1px solid var(--border); color: var(--muted); }
+    .badge.shiny    { border-color: var(--gold); color: var(--gold); }
+    .badge.animated { border-color: #4a9eff; color: #4a9eff; }
+
+    #empty {
+      display: none;
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      padding: 5rem 2rem;
+    }
+    #empty.visible { display: block; }
+    .empty-icon { font-size: 4rem; margin-bottom: 1.5rem; opacity: 0.3; }
+    .empty-text { font-family: 'IM Fell English', serif; font-style: italic; color: var(--muted); font-size: 1.1rem; }
+
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right: 0.5rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    footer {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      padding: 2rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+    }
+    footer a { color: var(--gold); text-decoration: none; }
+    footer a:hover { color: var(--gold2); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-emblem">🐉</div>
+  <h1>Loot Beast</h1>
+  <p class="subtitle">Creatures of the Dungeon — Starknet Sepolia</p>
+  <div class="contract-badge">CONTRACT · 0x0471e7df…e0a15</div>
+</header>
+
+<div class="connect-area">
+  <button id="connect-btn">⚔ Connect Wallet</button>
+  <div id="wallet-info"></div>
+</div>
+
+<div id="status"></div>
+
+<div class="divider" id="gallery-divider">
+  <div class="divider-line"></div>
+  <span class="divider-text" id="beast-count">Your Beasts</span>
+  <div class="divider-line"></div>
+</div>
+
+<div id="gallery"></div>
+
+<div id="empty">
+  <div class="empty-icon">🗡️</div>
+  <p class="empty-text">No beasts found in this wallet.<br>Venture into the dungeon to claim one.</p>
+</div>
+
+<footer>
+  Built on <a href="https://starknet.io" target="_blank">Starknet</a> ·
+  <a href="https://sepolia.voyager.online/contract/0x0471e7df1c7af2c049326eb838b2760e9749adf5138afff20dc1439dde6e0a15" target="_blank">View on Voyager</a>
+</footer>
+
+<script>
+  // ── Config ───────────────────────────────────────────────────────────────
+  const CONTRACT = "0x0471e7df1c7af2c049326eb838b2760e9749adf5138afff20dc1439dde6e0a15";
+  const RPC_URL  = "https://starknet-sepolia.public.blastapi.io/rpc/v0_7";
+
+  // Starknet Transfer event selector (keccak of "Transfer")
+  const TRANSFER_SELECTOR = "0x0099cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9";
+
+  // get_beast selector (starknet keccak of "get_beast")
+  const GET_BEAST_SELECTOR = "0x02dd9d8b4e2fd4f8e1a5c4d5cd0e8e8bb0e7e8b8b8b8b8b8b8b8b8b8b8b8b8";
+
+  const BEAST_NAMES = [
+    "","Warlock","Typhon","Jiangshi","Anansi","Basilisk","Gorgon","Kitsune","Lich",
+    "Chimera","Wendigo","Rakshasa","Werewolf","Banshee","Draugr","Vampire","Goblin",
+    "Skeleton","Orc","Revenant","Ghoul","Pixie","Gnome","Djinn","Fairy","Leprechaun",
+    "Kelpie","Sprite","Medusa","Jotunn","Minotaur","Kraken","Colossus","Balrog",
+    "Leviathan","Tarrasque","Titan","Nephilim","Behemoth","Hydra","Juggernaut",
+    "Fenrir","Ammit","Ifrit","Oni","Nue","Skinwalker","Chupacabra","Weretiger",
+    "Wyvern","Roc","Harpy","Pegasus","Hippogriff","Manticore","Cockatrice",
+  ];
+
+  const PREFIXES = [
+    "","Agony","Apocalypse","Armageddon","Beast","Behemoth","Blight","Blood",
+    "Bramble","Brimstone","Brood","Carrion","Cataclysm","Chimeric","Corpse",
+    "Corruption","Damnation","Death","Demon","Dire","Dragon","Dread","Doom",
+    "Dusk","Elder","Ember","Ethereal","Evil","Fallen","Feral","Grave","Grim",
+    "Hate","Havoc","Horror","Hypnotic","Loath","Malice","Morbid","Oblivion",
+    "Onslaught","Pain","Pandemonium","Phantom","Plague","Rage","Rune","Skull",
+    "Soul","Sorrow","Spirit","Storm","Tempest","Terror","Shadow","Unholy",
+    "Vengeance","Vile","Void","Woe","Wrath",
+  ];
+
+  const SUFFIXES = [
+    "","of Power","of Giants","of Titans","of Skill","of Perfection",
+    "of Brilliance","of Enlightenment","of Protection","of Anger","of Rage",
+    "of Fury","of Vitriol","of the Fox","of Detection","of Reflection",
+    "of the Twins","of Devastation","of Slaughter","of Sorrow","of Ruin",
+    "of Death","of Blight","of Dread",
+  ];
+
+  const BEAST_EMOJIS = {
+    1:"🧙",2:"🌀",3:"👻",4:"🕷️",5:"🐍",6:"🦎",7:"🦊",8:"💀",
+    9:"🔥",10:"❄️",11:"🐺",12:"🦂",13:"🐺",14:"👁️",15:"☠️",16:"🧛",
+    17:"👺",18:"💀",19:"👹",20:"🧟",21:"👻",default:"🐉"
+  };
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+  function shortAddr(addr) {
+    return addr.slice(0, 6) + "…" + addr.slice(-4);
+  }
+
+  function beastLabel(id, prefix, suffix) {
+    const base = BEAST_NAMES[id]  || ("Beast #" + id);
+    const pre  = PREFIXES[prefix] || "";
+    const suf  = SUFFIXES[suffix] || "";
+    return [pre, base, suf].filter(Boolean).join(" ");
+  }
+
+  // ── SVG card art ─────────────────────────────────────────────────────────
+  function makeSVG(beast, tokenId) {
+    const emoji   = BEAST_EMOJIS[beast.id] || BEAST_EMOJIS.default;
+    const isShiny = beast.shiny == 1;
+    const accent  = isShiny ? "#c9a84c" : "#8b1a1a";
+    const bg      = isShiny ? "#1a1500" : "#0e0b08";
+    const hpW     = Math.round(Math.min(beast.health, 1000) / 1000 * 180);
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <defs>
+    <radialGradient id="rbg" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="${accent}" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="${bg}"/>
+    </radialGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="300" height="300" fill="url(#rbg)"/>
+  <rect x="1" y="1" width="298" height="298" fill="none" stroke="${accent}" stroke-width="0.5" opacity="0.5"/>
+  <line x1="0" y1="20" x2="20" y2="0" stroke="${accent}" stroke-width="1" opacity="0.6"/>
+  <line x1="280" y1="0" x2="300" y2="20" stroke="${accent}" stroke-width="1" opacity="0.6"/>
+  <line x1="0" y1="280" x2="20" y2="300" stroke="${accent}" stroke-width="1" opacity="0.6"/>
+  <line x1="280" y1="300" x2="300" y2="280" stroke="${accent}" stroke-width="1" opacity="0.6"/>
+  <text x="150" y="42" font-family="serif" font-size="10" fill="${accent}" text-anchor="middle" letter-spacing="3" opacity="0.9">BEAST #${tokenId}</text>
+  <text x="150" y="62" font-family="serif" font-size="9" fill="#7a6a50" text-anchor="middle" letter-spacing="2">LVL ${beast.level}</text>
+  <text x="150" y="178" font-size="100" text-anchor="middle" filter="url(#glow)">${emoji}</text>
+  <rect x="60" y="242" width="180" height="3" fill="#1e1810" rx="1"/>
+  <rect x="60" y="242" width="${hpW}" height="3" fill="${accent}" rx="1"/>
+  <text x="60" y="258" font-family="serif" font-size="8" fill="#7a6a50">HP ${beast.health}</text>
+  ${isShiny ? '<text x="240" y="258" font-family="serif" font-size="9" fill="#c9a84c" text-anchor="end">✦ SHINY</text>' : ""}
+  ${beast.animated == 1 ? '<text x="240" y="258" font-family="serif" font-size="9" fill="#4a9eff" text-anchor="end">◉ GIF</text>' : ""}
+</svg>`;
+  }
+
+  // ── RPC helpers ───────────────────────────────────────────────────────────
+  async function rpc(method, params) {
+    const r = await fetch(RPC_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error.message);
+    return d.result;
+  }
+
+  async function fetchOwnedTokens(ownerAddress) {
+    const norm    = ownerAddress.toLowerCase().replace("0x", "").padStart(64, "0");
+    const fromKey = "0x" + "0".repeat(64);
+    const toKey   = "0x" + norm;
+
+    let events = [];
+    try {
+      const res = await rpc("starknet_getEvents", {
+        filter: {
+          from_block: { block_number: 0 },
+          to_block:   "latest",
+          address:    CONTRACT,
+          keys:       [[TRANSFER_SELECTOR], [fromKey], [toKey]],
+          chunk_size: 100,
+        },
+      });
+      events = res.events || [];
+    } catch(e) {
+      console.warn("Event fetch:", e.message);
+    }
+
+    const owned = new Set();
+    for (const ev of events) {
+      if (ev.data && ev.data.length >= 2) {
+        const low  = BigInt(ev.data[0]);
+        const high = BigInt(ev.data[1] || "0x0");
+        owned.add((low + (high << 128n)).toString());
+      }
+    }
+    return [...owned];
+  }
+
+  async function getBeast(tokenId) {
+    const idHex = "0x" + BigInt(tokenId).toString(16).padStart(64, "0");
+    try {
+      const result = await rpc("starknet_call", {
+        request: {
+          contract_address: CONTRACT,
+          entry_point_selector: GET_BEAST_SELECTOR,
+          calldata: [idHex, "0x0"],
+        },
+        block_id: "latest",
+      });
+      if (result && result.length >= 7) {
+        return {
+          id:       parseInt(result[0], 16),
+          prefix:   parseInt(result[1], 16),
+          suffix:   parseInt(result[2], 16),
+          level:    parseInt(result[3], 16),
+          health:   parseInt(result[4], 16),
+          shiny:    parseInt(result[5], 16),
+          animated: parseInt(result[6], 16),
+        };
+      }
+    } catch(e) {
+      console.warn("get_beast #" + tokenId + ":", e.message);
+    }
+    return null;
+  }
+
+  // ── Render card ───────────────────────────────────────────────────────────
+  function renderCard(tokenId, beast, idx) {
+    const name   = beastLabel(beast.id, beast.prefix, beast.suffix);
+    const svgUrl = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(makeSVG(beast, tokenId));
+    const card   = document.createElement("div");
+
+    card.className = "beast-card" + (beast.shiny == 1 ? " shiny" : "");
+    card.style.animationDelay = (idx * 0.08) + "s";
+    card.innerHTML = `
+      <div class="beast-art"><img src="${svgUrl}" alt="${name}"/></div>
+      <div class="beast-info">
+        <div class="beast-token-id">Token #${tokenId}</div>
+        <div class="beast-name">${name}</div>
+        <div class="beast-stats">
+          <div class="stat">
+            <span class="stat-label">Level</span>
+            <span class="stat-value">${beast.level}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Health</span>
+            <span class="stat-value">${beast.health}</span>
+            <div class="stat-bar"><div class="stat-bar-fill" style="width:${Math.min(100, Math.round(beast.health/10))}%"></div></div>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Species ID</span>
+            <span class="stat-value">${beast.id}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Prefix / Suffix</span>
+            <span class="stat-value">${beast.prefix} / ${beast.suffix}</span>
+          </div>
+        </div>
+        <div class="badges">
+          ${beast.shiny == 1    ? '<span class="badge shiny">✦ Shiny</span>'       : '<span class="badge">Regular</span>'}
+          ${beast.animated == 1 ? '<span class="badge animated">◉ Animated</span>' : '<span class="badge">Static</span>'}
+        </div>
+      </div>`;
+    return card;
+  }
+
+  // ── Load beasts ───────────────────────────────────────────────────────────
+  async function loadBeasts(addr) {
+    const gallery = document.getElementById("gallery");
+    const status  = document.getElementById("status");
+    const empty   = document.getElementById("empty");
+    const divider = document.getElementById("gallery-divider");
+    const counter = document.getElementById("beast-count");
+
+    gallery.innerHTML = "";
+    empty.classList.remove("visible");
+    divider.classList.remove("visible");
+    status.className = "";
+    status.innerHTML = '<span class="spinner"></span> Summoning your beasts from the dungeon…';
+
+    try {
+      const ids = await fetchOwnedTokens(addr);
+
+      if (!ids.length) {
+        status.innerHTML = "";
+        empty.classList.add("visible");
+        return;
+      }
+
+      counter.textContent = ids.length + " Beast" + (ids.length !== 1 ? "s" : "") + " Found";
+      divider.classList.add("visible");
+      status.innerHTML = "";
+
+      for (let i = 0; i < ids.length; i++) {
+        const beast = await getBeast(ids[i]) || { id:1, prefix:0, suffix:0, level:1, health:100, shiny:0, animated:0 };
+        gallery.appendChild(renderCard(ids[i], beast, i));
+      }
+
+    } catch(err) {
+      console.error(err);
+      status.className = "error";
+      status.textContent = "⚠ " + err.message;
+    }
+  }
+
+  // ── Wallet connect ────────────────────────────────────────────────────────
+  document.getElementById("connect-btn").addEventListener("click", async () => {
+    const btn    = document.getElementById("connect-btn");
+    const info   = document.getElementById("wallet-info");
+    const status = document.getElementById("status");
+
+    btn.disabled = true;
+    btn.textContent = "Connecting…";
+
+    try {
+      const provider = window.starknet
+        || window.starknet_braavos
+        || window.starknet_argentX
+        || window.braavos
+        || window.argentX;
+
+      if (!provider) throw new Error("No Starknet wallet found. Install Braavos or ArgentX.");
+
+      await provider.enable({ starknetVersion: "v5" });
+
+      const address = provider.selectedAddress || provider.account?.address;
+      if (!address) throw new Error("No account selected in wallet.");
+
+      btn.textContent = "✓ Connected";
+      info.textContent = shortAddr(address);
+      info.classList.add("visible");
+
+      await loadBeasts(address);
+
+    } catch(err) {
+      console.error(err);
+      status.className = "error";
+      status.textContent = "⚠ " + err.message;
+      btn.disabled = false;
+      btn.textContent = "⚔ Connect Wallet";
+    }
+  });
+</script>
+</body>
+</html>
