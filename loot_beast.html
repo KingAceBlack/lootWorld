@@ -6,7 +6,7 @@
   <title>Loot Beast — Gallery</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@400;600&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet"/>
   <style>
-    :root{--gold:#c9a84c;--gold2:#f0d070;--dark:#0a0806;--dark2:#13100a;--dark3:#1e1810;--red:#8b1a1a;--red2:#c0392b;--text:#e8dcc8;--muted:#7a6a50;--border:#2e2416}
+    :root{--gold:#c9a84c;--gold2:#f0d070;--dark:#0a0806;--dark2:#13100a;--dark3:#1e1810;--red:#8b1a1a;--red2:#c0392b;--text:#e8dcc8;--muted:#7a6a50;--border:#2e2416;--blue:#4a9eff;--green:#4caf50}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     body{background:var(--dark);color:var(--text);font-family:'Cinzel',serif;min-height:100vh;overflow-x:hidden}
     body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(139,26,26,.18) 0%,transparent 70%),radial-gradient(ellipse 60% 40% at 80% 100%,rgba(201,168,76,.08) 0%,transparent 60%);pointer-events:none;z-index:0}
@@ -23,6 +23,8 @@
     #wallet-info{font-family:'IM Fell English',serif;font-style:italic;font-size:.85rem;color:var(--muted);display:none}#wallet-info.visible{display:block}
     #status{position:relative;z-index:10;text-align:center;padding:0 2rem 1.5rem;font-family:'IM Fell English',serif;font-style:italic;font-size:.95rem;color:var(--muted);min-height:2rem}
     #status.error{color:var(--red2)}
+
+    /* Mint panel */
     .mint-section{position:relative;z-index:10;max-width:560px;margin:0 auto 2rem;padding:0 2rem;display:none}
     .mint-section.visible{display:block}
     .mint-panel{border:1px solid var(--border);background:var(--dark2);padding:2rem;position:relative;overflow:hidden}
@@ -41,21 +43,37 @@
     #mint-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(201,168,76,.2),transparent);opacity:0;transition:opacity .3s}
     #mint-btn:hover::before{opacity:1}#mint-btn:hover{border-color:var(--gold)}#mint-btn:disabled{opacity:.4;cursor:not-allowed}
     #mint-status{margin-top:1rem;font-family:'IM Fell English',serif;font-style:italic;font-size:.85rem;color:var(--muted);text-align:center;min-height:1.4rem}
-    #mint-status.error{color:var(--red2)}#mint-status.success{color:#4caf50}
+    #mint-status.error{color:var(--red2)}#mint-status.success{color:var(--green)}
     .shiny-chance{font-size:.65rem;color:var(--muted);text-align:center;margin-top:.8rem;letter-spacing:.08em}
+
+    /* Divider */
     .divider{position:relative;z-index:10;display:none;align-items:center;gap:1rem;padding:0 2.5rem;margin:.5rem auto 1.5rem;max-width:1400px}
     .divider.visible{display:flex}.divider-line{flex:1;height:1px;background:var(--border)}
     .divider-text{font-size:.7rem;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;white-space:nowrap}
-    #gallery{position:relative;z-index:10;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.8rem;padding:1rem 2.5rem 4rem;max-width:1400px;margin:0 auto}
+
+    /* Gallery */
+    #gallery{position:relative;z-index:10;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.8rem;padding:1rem 2.5rem 4rem;max-width:1400px;margin:0 auto}
     .beast-card{background:var(--dark2);border:1px solid var(--border);position:relative;overflow:hidden;transition:transform .3s,border-color .3s;animation:card-in .5s ease both}
     @keyframes card-in{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
     .beast-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0;transition:opacity .3s}
     .beast-card:hover{transform:translateY(-4px);border-color:var(--gold)}.beast-card:hover::before{opacity:1}
-    .beast-art{width:100%;aspect-ratio:1;background:var(--dark3);display:flex;align-items:center;justify-content:center;overflow:hidden}
+
+    /* Locked card style */
+    .beast-card.is-locked{border-color:#3a3060}
+    .beast-card.is-locked::before{background:linear-gradient(90deg,transparent,var(--blue),transparent);opacity:1}
+
+    .beast-art{width:100%;aspect-ratio:1;background:var(--dark3);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
     .beast-art img{width:100%;height:100%;object-fit:cover;display:block}
     .beast-card.shiny .beast-art::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent 30%,rgba(201,168,76,.15) 50%,transparent 70%);animation:shimmer 3s ease-in-out infinite}
     @keyframes shimmer{0%{transform:translateX(-100%) rotate(30deg)}100%{transform:translateX(200%) rotate(30deg)}}
-    .beast-info{padding:1.2rem 1.4rem 1.4rem}
+
+    /* Lock overlay on art */
+    .lock-overlay{position:absolute;inset:0;background:rgba(10,8,30,.7);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transition:opacity .3s;backdrop-filter:blur(2px)}
+    .beast-card.is-locked .lock-overlay{opacity:1}
+    .lock-icon{font-size:2.5rem;margin-bottom:.4rem}
+    .lock-label{font-size:.65rem;letter-spacing:.2em;text-transform:uppercase;color:var(--blue)}
+
+    .beast-info{padding:1.2rem 1.4rem 1rem}
     .beast-token-id{font-size:.65rem;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.3rem}
     .beast-name{font-family:'Cinzel Decorative',serif;font-size:.95rem;color:var(--gold);margin-bottom:1rem;line-height:1.3}
     .beast-stats{display:grid;grid-template-columns:1fr 1fr;gap:.5rem 1rem}
@@ -66,7 +84,18 @@
     .stat-bar-fill{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--red),var(--gold))}
     .badges{display:flex;gap:.4rem;margin-top:.9rem;flex-wrap:wrap}
     .badge{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;padding:.2rem .6rem;border:1px solid var(--border);color:var(--muted)}
-    .badge.shiny{border-color:var(--gold);color:var(--gold)}.badge.animated{border-color:#4a9eff;color:#4a9eff}
+    .badge.shiny{border-color:var(--gold);color:var(--gold)}.badge.animated{border-color:var(--blue);color:var(--blue)}
+    .badge.locked{border-color:var(--blue);color:var(--blue);background:rgba(74,158,255,.08)}
+
+    /* Lock/Unlock button on card */
+    .card-actions{padding:.8rem 1.4rem 1.2rem;border-top:1px solid var(--border);display:flex;gap:.6rem;align-items:center}
+    .lock-btn{font-family:'Cinzel',serif;font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;padding:.5rem 1rem;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .25s;flex:1}
+    .lock-btn:hover:not(:disabled){border-color:var(--blue);color:var(--blue)}
+    .lock-btn.unlock-btn:hover:not(:disabled){border-color:var(--green);color:var(--green)}
+    .lock-btn:disabled{opacity:.35;cursor:not-allowed}
+    .card-status{font-family:'IM Fell English',serif;font-style:italic;font-size:.7rem;color:var(--muted);flex:1;text-align:right}
+    .card-status.ok{color:var(--green)}.card-status.err{color:var(--red2)}
+
     #empty{display:none;position:relative;z-index:10;text-align:center;padding:5rem 2rem}
     #empty.visible{display:block}.empty-icon{font-size:4rem;margin-bottom:1.5rem;opacity:.3}
     .empty-text{font-family:'IM Fell English',serif;font-style:italic;color:var(--muted);font-size:1.1rem}
@@ -81,13 +110,15 @@
   <div class="emblem">&#x1F409;</div>
   <h1>Loot Beast</h1>
   <p class="subtitle">Creatures of the Dungeon &mdash; Starknet Sepolia</p>
-  <div class="contract-badge">CONTRACT &middot; 0x0471e7df&hellip;e0a15</div>
+  <div class="contract-badge">NFT &middot; 0x0471e7df&hellip;e0a15 &nbsp;|&nbsp; VAULT &middot; 0x027d9dd7&hellip;034e</div>
 </header>
 <div class="connect-area">
   <button id="connect-btn">&#x2694; Connect Wallet</button>
   <div id="wallet-info"></div>
 </div>
 <div id="status"></div>
+
+<!-- Mint panel -->
 <div class="mint-section" id="mint-section">
   <div class="mint-panel">
     <div class="mint-title">&#x2694; Summon a Beast</div>
@@ -106,6 +137,7 @@
     <p class="shiny-chance">&#x2726; 5% Shiny &middot; 10% Animated</p>
   </div>
 </div>
+
 <div class="divider" id="gallery-divider">
   <div class="divider-line"></div>
   <span class="divider-text" id="beast-count">Your Beasts</span>
@@ -118,15 +150,24 @@
 </div>
 <footer>
   Built on <a href="https://starknet.io" target="_blank">Starknet</a> &middot;
-  <a href="https://sepolia.voyager.online/contract/0x0471e7df1c7af2c049326eb838b2760e9749adf5138afff20dc1439dde6e0a15" target="_blank">View on Voyager</a>
+  <a href="https://sepolia.voyager.online/contract/0x0471e7df1c7af2c049326eb838b2760e9749adf5138afff20dc1439dde6e0a15" target="_blank">NFT on Voyager</a> &middot;
+  <a href="https://sepolia.voyager.online/contract/0x027d9dd74e2b39b8da20ccfeccf9c15bdbfa41a8ae0b3b303c0b2af0b897034e" target="_blank">Vault on Voyager</a>
 </footer>
-<script>
-  const CONTRACT = "0x0471e7df1c7af2c049326eb838b2760e9749adf5138afff20dc1439dde6e0a15";
-  // REPLACE with your Alchemy API key URL
-  const RPC_URL  = "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_10/CJMHx8Zr5oQbMTXXvtxfY";
 
-  // ERC-721 Transfer event selector
+<script>
+  const NFT_CONTRACT   = "0x0471e7df1c7af2c049326eb838b2760e9749adf5138afff20dc1439dde6e0a15";
+  const VAULT_CONTRACT = "0x027d9dd74e2b39b8da20ccfeccf9c15bdbfa41a8ae0b3b303c0b2af0b897034e";
+  // Replace with your Alchemy key
+  const RPC_URL        = "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_10/CJMHx8Zr5oQbMTXXvtxfY";
+
   const TRANSFER_KEY = "0x0099cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9";
+
+  // approve(spender, token_id_low, token_id_high)
+  const APPROVE_SEL  = "0x0219209e083275171774dab1df80982e9df2096516f06319c5c6d71ae0a8480c";
+  // vault lock(token_id_low, token_id_high)
+  const LOCK_SEL     = "0x03f461fb3cdd7ba87790dfdb0ecf8d6db24f9c7bafb9f1e6a2b6d1a09c7adcf9";
+  // vault is_locked(token_id_low, token_id_high)
+  const IS_LOCKED_SEL= "0x011a8b2d9b4f79e47be56862bff2c57f3e6b30e7c8f2b17a01d6e5a42ed7e4c8";
 
   const BEAST_NAMES = ["","Warlock","Typhon","Jiangshi","Anansi","Basilisk","Gorgon","Kitsune","Lich","Chimera","Wendigo","Rakshasa","Werewolf","Banshee","Draugr","Vampire","Goblin","Skeleton","Orc","Revenant","Ghoul","Pixie","Gnome","Djinn","Fairy","Leprechaun","Kelpie","Sprite","Medusa","Jotunn","Minotaur","Kraken","Colossus","Balrog","Leviathan","Tarrasque","Titan","Nephilim","Behemoth","Hydra","Juggernaut","Fenrir","Ammit","Ifrit","Oni","Nue","Skinwalker","Chupacabra","Weretiger","Wyvern","Roc","Harpy","Pegasus","Hippogriff","Manticore","Cockatrice"];
   const PREFIXES = ["","Agony","Apocalypse","Armageddon","Beast","Behemoth","Blight","Blood","Bramble","Brimstone","Brood","Carrion","Cataclysm","Chimeric","Corpse","Corruption","Damnation","Death","Demon","Dire","Dragon","Dread","Doom","Dusk","Elder","Ember","Ethereal","Evil","Fallen","Feral","Grave","Grim","Hate","Havoc","Horror","Hypnotic","Loath","Malice","Morbid","Oblivion","Onslaught","Pain","Pandemonium","Phantom","Plague","Rage","Rune","Skull","Soul","Sorrow","Spirit","Storm","Tempest","Terror","Shadow","Unholy","Vengeance","Vile","Void","Woe","Wrath"];
@@ -147,88 +188,97 @@
     return d.result;
   }
 
-  async function callContract(selector,calldata=[]){
-    return rpc("starknet_call",{request:{contract_address:CONTRACT,entry_point_selector:selector,calldata},block_id:"latest"});
+  async function callContract(contract,selector,calldata=[]){
+    return rpc("starknet_call",{request:{contract_address:contract,entry_point_selector:selector,calldata},block_id:"latest"});
+  }
+
+  // Check vault lock status for a token
+  async function checkIsLocked(tokenId){
+    try{
+      const res=await callContract(VAULT_CONTRACT,IS_LOCKED_SEL,[padHex(tokenId),"0x0"]);
+      return res&&res[0]==="0x1";
+    }catch(e){return false;}
   }
 
   // ── Fetch owned tokens via Transfer events ────────────────────────────────
-  // On Starknet ERC-721, ALL Transfer data is in keys (not data):
-  // keys[0]=selector, keys[1]=from, keys[2]=to, keys[3]=token_id_low, keys[4]=token_id_high
-  async function fetchOwnedTokens(ownerAddress) {
-    const myNorm = normAddr(ownerAddress);
-    const zero   = "0x" + "0".repeat(64);
-    const ownership = {};
+  async function fetchOwnedTokens(ownerAddress){
+    const myNorm=normAddr(ownerAddress);
+    const zero="0x"+"0".repeat(64);
+    const ownership={};
 
-    // 1. Fetch mint events (from = 0x0)
-    try {
-      let contToken = null;
-      do {
-        const filter = {
-          from_block:{block_number:0}, to_block:"latest",
-          address:CONTRACT,
-          keys:[[TRANSFER_KEY],[zero]], // selector + from=0x0
-          chunk_size:1000,
-        };
-        if(contToken) filter.continuation_token = contToken;
-        const res = await rpc("starknet_getEvents",{filter});
+    // Mint events (from=0x0)
+    try{
+      let ct=null;
+      do{
+        const filter={from_block:{block_number:0},to_block:"latest",address:NFT_CONTRACT,keys:[[TRANSFER_KEY],[zero]],chunk_size:1000};
+        if(ct)filter.continuation_token=ct;
+        const res=await rpc("starknet_getEvents",{filter});
         for(const ev of (res.events||[])){
-          // token_id is in keys[3] (low) and keys[4] (high)
-          const to      = normAddr(ev.keys[2]||"0x0");
-          const tokenId = BigInt(ev.keys[3]||"0x0").toString();
-          if(tokenId!=="0") ownership[tokenId] = to;
+          const to=normAddr(ev.keys[2]||"0x0");
+          const tokenId=BigInt(ev.keys[3]||"0x0").toString();
+          if(tokenId!=="0")ownership[tokenId]=to;
         }
-        contToken = res.continuation_token||null;
-      } while(contToken);
-    } catch(e){ console.warn("Mint events:",e.message); }
+        ct=res.continuation_token||null;
+      }while(ct);
+    }catch(e){console.warn("Mint events:",e.message);}
 
-    // 2. Fetch transfer-out events (from = myAddress) to update ownership
-    try {
-      let contToken = null;
-      do {
-        const filter = {
-          from_block:{block_number:0}, to_block:"latest",
-          address:CONTRACT,
-          keys:[[TRANSFER_KEY],[myNorm]], // selector + from=me
-          chunk_size:1000,
-        };
-        if(contToken) filter.continuation_token = contToken;
-        const res = await rpc("starknet_getEvents",{filter});
+    // Transfer-out events (from=me)
+    try{
+      let ct=null;
+      do{
+        const filter={from_block:{block_number:0},to_block:"latest",address:NFT_CONTRACT,keys:[[TRANSFER_KEY],[myNorm]],chunk_size:1000};
+        if(ct)filter.continuation_token=ct;
+        const res=await rpc("starknet_getEvents",{filter});
         for(const ev of (res.events||[])){
-          const to      = normAddr(ev.keys[2]||"0x0");
-          const tokenId = BigInt(ev.keys[3]||"0x0").toString();
-          if(tokenId!=="0") ownership[tokenId] = to;
+          const to=normAddr(ev.keys[2]||"0x0");
+          const tokenId=BigInt(ev.keys[3]||"0x0").toString();
+          if(tokenId!=="0")ownership[tokenId]=to;
         }
-        contToken = res.continuation_token||null;
-      } while(contToken);
-    } catch(e){ console.warn("Transfer-out events:",e.message); }
+        ct=res.continuation_token||null;
+      }while(ct);
+    }catch(e){console.warn("Transfer-out:",e.message);}
 
-    // Return token IDs where current owner = me
+    // Also include tokens locked in vault (vault owns them on-chain, but user locked them)
+    // Fetch transfer events where to=vault
+    const vaultNorm=normAddr(VAULT_CONTRACT);
+    try{
+      let ct=null;
+      do{
+        const filter={from_block:{block_number:0},to_block:"latest",address:NFT_CONTRACT,keys:[[TRANSFER_KEY],[myNorm]],chunk_size:1000};
+        if(ct)filter.continuation_token=ct;
+        const res=await rpc("starknet_getEvents",{filter});
+        for(const ev of (res.events||[])){
+          const to=normAddr(ev.keys[2]||"0x0");
+          const tokenId=BigInt(ev.keys[3]||"0x0").toString();
+          // If transferred TO vault, mark as vault-owned but originally mine
+          if(tokenId!=="0"&&to===vaultNorm){
+            ownership[tokenId]="vault:"+myNorm;
+          }
+        }
+        ct=res.continuation_token||null;
+      }while(ct);
+    }catch(e){}
+
+    // Return tokens owned by me OR locked in vault by me
     return Object.entries(ownership)
-      .filter(([,owner])=>owner===myNorm)
-      .map(([id])=>id);
+      .filter(([,owner])=>owner===myNorm||owner==="vault:"+myNorm)
+      .map(([id,owner])=>({id,locked:owner.startsWith("vault:")}));
   }
 
-  // ── get_beast ─────────────────────────────────────────────────────────────
-  const GET_BEAST_SELS = [
-    "0x01a3cd89e72b5e5d9b3a25de7b4a4d41ade5eddc0b42c7b37b7afba61d2d8e4f",
-    "0x029ce0933f3f6dd0c5c0a45a7fc87fb96a12af73da5f0da07ead96a9cab8da96",
-    "0x02e4263afad30923c891518314c3c95dbe830a16874e8abc5777a9a20b54c76e",
-  ];
-
+  // get_beast
+  const GET_BEAST_SELS=["0x01a3cd89e72b5e5d9b3a25de7b4a4d41ade5eddc0b42c7b37b7afba61d2d8e4f","0x029ce0933f3f6dd0c5c0a45a7fc87fb96a12af73da5f0da07ead96a9cab8da96"];
   async function getBeastData(tokenId){
     for(const sel of GET_BEAST_SELS){
       try{
-        const res=await callContract(sel,[padHex(tokenId),"0x0"]);
-        if(res&&res.length>=7){
-          return {id:parseInt(res[0],16),prefix:parseInt(res[1],16),suffix:parseInt(res[2],16),level:parseInt(res[3],16),health:parseInt(res[4],16),shiny:parseInt(res[5],16),animated:parseInt(res[6],16)};
-        }
+        const res=await callContract(NFT_CONTRACT,sel,[padHex(tokenId),"0x0"]);
+        if(res&&res.length>=7)return{id:parseInt(res[0],16),prefix:parseInt(res[1],16),suffix:parseInt(res[2],16),level:parseInt(res[3],16),health:parseInt(res[4],16),shiny:parseInt(res[5],16),animated:parseInt(res[6],16)};
       }catch(e){}
     }
     const s=parseInt(tokenId);
-    return {id:(s%55)+1,prefix:s%PREFIXES.length,suffix:s%SUFFIXES.length,level:(s%50)+1,health:(s%950)+50,shiny:0,animated:0};
+    return{id:(s%55)+1,prefix:s%PREFIXES.length,suffix:s%SUFFIXES.length,level:(s%50)+1,health:(s%950)+50,shiny:0,animated:0};
   }
 
-  // ── SVG art ───────────────────────────────────────────────────────────────
+  // SVG art
   function makeSVG(beast,tokenId){
     const shiny=beast.shiny==1,accent=shiny?"#c9a84c":"#8b1a1a",bg=shiny?"#1a1500":"#0e0b08";
     const hpW=Math.round(Math.min(beast.health,1000)/1000*180);
@@ -253,26 +303,122 @@
       +'</svg>';
   }
 
+  let walletProvider=null,walletAddress=null,pendingBeast=null;
+
+  // ── Lock a beast (approve + lock in one multicall) ────────────────────────
+  async function lockBeast(tokenId,btn,statusEl){
+    const account=walletProvider.account;
+    if(!account)throw new Error("No account");
+    btn.disabled=true;btn.textContent="Locking...";
+    statusEl.className="card-status";statusEl.textContent="Awaiting wallet...";
+    try{
+      // Multicall: approve vault, then lock
+      const result=await account.execute([
+        {
+          contractAddress:NFT_CONTRACT,
+          entrypoint:"approve",
+          calldata:[VAULT_CONTRACT,toHex(tokenId),"0x0"],
+        },
+        {
+          contractAddress:VAULT_CONTRACT,
+          entrypoint:"lock",
+          calldata:[toHex(tokenId),"0x0"],
+        },
+      ]);
+      statusEl.className="card-status ok";
+      statusEl.innerHTML='<a href="https://sepolia.voyager.online/tx/'+result.transaction_hash+'" target="_blank" style="color:var(--green)">Locked!</a>';
+      // Update card visually
+      const card=btn.closest(".beast-card");
+      card.classList.add("is-locked");
+      btn.textContent="&#x1F513; Unlock";
+      btn.className="lock-btn unlock-btn";
+      btn.disabled=false;
+      btn.onclick=()=>unlockBeast(tokenId,btn,statusEl);
+      // Update badge
+      const badges=card.querySelector(".badges");
+      if(!badges.querySelector(".badge.locked")){
+        const b=document.createElement("span");
+        b.className="badge locked";b.textContent="Locked";
+        badges.appendChild(b);
+      }
+    }catch(err){
+      statusEl.className="card-status err";statusEl.textContent=err.message.slice(0,40);
+      btn.disabled=false;btn.textContent="&#x1F512; Lock";
+    }
+  }
+
+  // ── Unlock — only vault owner can do this ─────────────────────────────────
+  async function unlockBeast(tokenId,btn,statusEl){
+    const account=walletProvider.account;
+    if(!account)throw new Error("No account");
+    btn.disabled=true;btn.textContent="Releasing...";
+    statusEl.className="card-status";statusEl.textContent="Awaiting wallet...";
+    try{
+      // release(token_id_low, token_id_high, to_address)
+      const result=await account.execute({
+        contractAddress:VAULT_CONTRACT,
+        entrypoint:"release",
+        calldata:[toHex(tokenId),"0x0",walletAddress],
+      });
+      statusEl.className="card-status ok";
+      statusEl.innerHTML='<a href="https://sepolia.voyager.online/tx/'+result.transaction_hash+'" target="_blank" style="color:var(--green)">Released!</a>';
+      const card=btn.closest(".beast-card");
+      card.classList.remove("is-locked");
+      btn.textContent="&#x1F512; Lock";
+      btn.className="lock-btn";
+      btn.disabled=false;
+      btn.onclick=()=>lockBeast(tokenId,btn,statusEl);
+      const lockedBadge=card.querySelector(".badge.locked");
+      if(lockedBadge)lockedBadge.remove();
+    }catch(err){
+      statusEl.className="card-status err";statusEl.textContent=err.message.slice(0,40);
+      btn.disabled=false;btn.textContent="&#x1F513; Unlock";
+    }
+  }
+
   // ── Render card ───────────────────────────────────────────────────────────
-  function renderCard(tokenId,beast,idx){
+  function renderCard(tokenId,beast,isLocked,idx){
     const name=beastLabel(beast.id,beast.prefix,beast.suffix);
     const svgUrl="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(makeSVG(beast,tokenId));
     const card=document.createElement("div");
-    card.className="beast-card"+(beast.shiny==1?" shiny":"");
+    card.className="beast-card"+(beast.shiny==1?" shiny":"")+(isLocked?" is-locked":"");
     card.style.animationDelay=(idx*.08)+"s";
-    card.innerHTML='<div class="beast-art"><img src="'+svgUrl+'" alt="'+name+'"/></div>'
-      +'<div class="beast-info"><div class="beast-token-id">Token #'+tokenId+'</div>'
-      +'<div class="beast-name">'+name+'</div>'
-      +'<div class="beast-stats">'
-      +'<div class="stat"><span class="stat-label">Level</span><span class="stat-value">'+beast.level+'</span></div>'
-      +'<div class="stat"><span class="stat-label">Health</span><span class="stat-value">'+beast.health+'</span>'
-      +'<div class="stat-bar"><div class="stat-bar-fill" style="width:'+Math.min(100,Math.round(beast.health/10))+'%"></div></div></div>'
-      +'<div class="stat"><span class="stat-label">Species ID</span><span class="stat-value">'+beast.id+'</span></div>'
-      +'<div class="stat"><span class="stat-label">Prefix / Suffix</span><span class="stat-value">'+beast.prefix+' / '+beast.suffix+'</span></div>'
-      +'</div><div class="badges">'
-      +(beast.shiny==1?'<span class="badge shiny">Shiny</span>':'<span class="badge">Regular</span>')
-      +(beast.animated==1?'<span class="badge animated">Animated</span>':'<span class="badge">Static</span>')
-      +'</div></div>';
+
+    const lockBtnHtml=isLocked
+      ?'<button class="lock-btn unlock-btn">&#x1F513; Unlock</button>'
+      :'<button class="lock-btn">&#x1F512; Lock</button>';
+
+    card.innerHTML=
+      '<div class="beast-art">'
+        +'<img src="'+svgUrl+'" alt="'+name+'"/>'
+        +'<div class="lock-overlay"><div class="lock-icon">&#x1F512;</div><div class="lock-label">Locked in Vault</div></div>'
+      +'</div>'
+      +'<div class="beast-info">'
+        +'<div class="beast-token-id">Token #'+tokenId+'</div>'
+        +'<div class="beast-name">'+name+'</div>'
+        +'<div class="beast-stats">'
+          +'<div class="stat"><span class="stat-label">Level</span><span class="stat-value">'+beast.level+'</span></div>'
+          +'<div class="stat"><span class="stat-label">Health</span><span class="stat-value">'+beast.health+'</span>'
+            +'<div class="stat-bar"><div class="stat-bar-fill" style="width:'+Math.min(100,Math.round(beast.health/10))+'%"></div></div></div>'
+          +'<div class="stat"><span class="stat-label">Species ID</span><span class="stat-value">'+beast.id+'</span></div>'
+          +'<div class="stat"><span class="stat-label">Prefix / Suffix</span><span class="stat-value">'+beast.prefix+' / '+beast.suffix+'</span></div>'
+        +'</div>'
+        +'<div class="badges">'
+          +(beast.shiny==1?'<span class="badge shiny">Shiny</span>':'<span class="badge">Regular</span>')
+          +(beast.animated==1?'<span class="badge animated">Animated</span>':'<span class="badge">Static</span>')
+          +(isLocked?'<span class="badge locked">Locked</span>':'')
+        +'</div>'
+      +'</div>'
+      +'<div class="card-actions">'+lockBtnHtml+'<span class="card-status"></span></div>';
+
+    // Wire up button
+    const btn=card.querySelector(".lock-btn");
+    const statusEl=card.querySelector(".card-status");
+    if(isLocked){
+      btn.onclick=()=>unlockBeast(tokenId,btn,statusEl);
+    }else{
+      btn.onclick=()=>lockBeast(tokenId,btn,statusEl);
+    }
     return card;
   }
 
@@ -284,35 +430,25 @@
     gallery.innerHTML="";empty.classList.remove("visible");divider.classList.remove("visible");
     status.className="";status.innerHTML='<span class="spinner"></span> Fetching your beasts...';
     try{
-      const ids=await fetchOwnedTokens(addr);
-      if(!ids.length){status.innerHTML="";empty.classList.add("visible");return;}
-      counter.textContent=ids.length+" Beast"+(ids.length!==1?"s":"")+" Found";
+      const tokens=await fetchOwnedTokens(addr);
+      if(!tokens.length){status.innerHTML="";empty.classList.add("visible");return;}
+      counter.textContent=tokens.length+" Beast"+(tokens.length!==1?"s":"")+" Found";
       divider.classList.add("visible");status.innerHTML="";
-      for(let i=0;i<ids.length;i++){
-        const beast=await getBeastData(ids[i]);
-        gallery.appendChild(renderCard(ids[i],beast,i));
+      for(let i=0;i<tokens.length;i++){
+        const {id,locked}=tokens[i];
+        const beast=await getBeastData(id);
+        gallery.appendChild(renderCard(id,beast,locked,i));
       }
     }catch(err){console.error(err);status.className="error";status.textContent="Error: "+err.message;}
   }
 
   // ── Mint ──────────────────────────────────────────────────────────────────
-  let walletProvider=null,walletAddress=null,pendingBeast=null;
-
-  function rollBeast(){
-    return {id:randInt(1,55),prefix:randInt(0,PREFIXES.length-1),suffix:randInt(0,SUFFIXES.length-1),level:randInt(1,50),health:randInt(50,1000),shiny:Math.random()<.05?1:0,animated:Math.random()<.10?1:0};
-  }
-
+  function rollBeast(){return{id:randInt(1,55),prefix:randInt(0,PREFIXES.length-1),suffix:randInt(0,SUFFIXES.length-1),level:randInt(1,50),health:randInt(50,1000),shiny:Math.random()<.05?1:0,animated:Math.random()<.10?1:0};}
   function updatePreview(b){
     pendingBeast=b;
     document.getElementById("preview-img").src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(makeSVG(b,"?"));
     document.getElementById("preview-name").textContent=beastLabel(b.id,b.prefix,b.suffix);
-    document.getElementById("preview-stats").innerHTML=
-      '<div class="mini-stat">Level<span>'+b.level+'</span></div>'
-      +'<div class="mini-stat">Health<span>'+b.health+'</span></div>'
-      +'<div class="mini-stat">Species<span>#'+b.id+'</span></div>'
-      +'<div class="mini-stat">Prefix<span>'+b.prefix+'</span></div>'
-      +'<div class="mini-stat">Suffix<span>'+b.suffix+'</span></div>'
-      +'<div class="mini-stat">Shiny<span>'+(b.shiny?"Yes":"No")+'</span></div>';
+    document.getElementById("preview-stats").innerHTML='<div class="mini-stat">Level<span>'+b.level+'</span></div><div class="mini-stat">Health<span>'+b.health+'</span></div><div class="mini-stat">Species<span>#'+b.id+'</span></div><div class="mini-stat">Shiny<span>'+(b.shiny?"Yes":"No")+'</span></div>';
   }
 
   async function mintBeast(){
@@ -323,7 +459,7 @@
     try{
       const account=walletProvider.account;
       if(!account)throw new Error("Wallet account not available");
-      const result=await account.execute({contractAddress:CONTRACT,entrypoint:"mint",calldata:[walletAddress,toHex(b.id),toHex(b.prefix),toHex(b.suffix),toHex(b.level),toHex(b.health),toHex(b.shiny),toHex(b.animated)]});
+      const result=await account.execute({contractAddress:NFT_CONTRACT,entrypoint:"mint",calldata:[walletAddress,toHex(b.id),toHex(b.prefix),toHex(b.suffix),toHex(b.level),toHex(b.health),toHex(b.shiny),toHex(b.animated)]});
       const tx=result.transaction_hash;
       ms.className="success";
       ms.innerHTML='Summoned! <a href="https://sepolia.voyager.online/tx/'+tx+'" target="_blank" style="color:var(--gold)">'+tx.slice(0,18)+'...</a>';
@@ -335,11 +471,7 @@
     }
   }
 
-  document.getElementById("reroll-btn").addEventListener("click",()=>{
-    updatePreview(rollBeast());
-    document.getElementById("mint-status").className="";
-    document.getElementById("mint-status").textContent="";
-  });
+  document.getElementById("reroll-btn").addEventListener("click",()=>{updatePreview(rollBeast());document.getElementById("mint-status").className="";document.getElementById("mint-status").textContent="";});
   document.getElementById("mint-btn").addEventListener("click",mintBeast);
 
   // ── Connect wallet ────────────────────────────────────────────────────────
