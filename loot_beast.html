@@ -604,35 +604,78 @@
   }
 
   async function fetchOwnedTokens(ownerAddress) {
-    const norm    = ownerAddress.toLowerCase().replace("0x", "").padStart(64, "0");
-    const fromKey = "0x" + "0".repeat(64);
-    const toKey   = "0x" + norm;
+    const normOwner = "0x" + ownerAddress.toLowerCase().replace("0x", "").padStart(64, "0");
+    const zeroAddr  = "0x" + "0".repeat(64);
 
-    let events = [];
+    // Fetch ALL Transfer events from this contract (no key filtering beyond selector)
+    // then filter by to/from in JS to track current ownership
+    let allEvents = [];
+    let continuationToken = undefined;
+
     try {
-      const res = await rpc("starknet_getEvents", {
-        filter: {
+      do {
+        const filter = {
           from_block: { block_number: 0 },
           to_block:   "latest",
           address:    CONTRACT,
-          keys:       [[TRANSFER_SELECTOR], [fromKey], [toKey]],
-          chunk_size: 100,
-        },
-      });
-      events = res.events || [];
+          keys:       [[TRANSFER_SELECTOR]],
+          chunk_size: 1000,
+        };
+        if (continuationToken) filter.continuation_token = continuationToken;
+
+        const res = await rpc("starknet_getEvents", { filter });
+        allEvents = allEvents.concat(res.events || []);
+        continuationToken = res.continuation_token;
+      } while (continuationToken);
+
     } catch(e) {
       console.warn("Event fetch:", e.message);
     }
 
-    const owned = new Set();
-    for (const ev of events) {
-      if (ev.data && ev.data.length >= 2) {
-        const low  = BigInt(ev.data[0]);
-        const high = BigInt(ev.data[1] || "0x0");
-        owned.add((low + (high << 128n)).toString());
+    // Parse events — Transfer(from, to, token_id_low, token_id_high)
+    // In ERC-721 on Starknet: keys = [selector, from, to], data = [token_id_low, token_id_high]
+    const ownership = {}; // tokenId -> current owner
+
+    for (const ev of allEvents) {
+      try {
+        // keys[0] = selector, keys[1] = from, keys[2] = to
+        // data[0] = token_id low, data[1] = token_id high
+        const keys = ev.keys || [];
+        const data = ev.data || [];
+
+        let from, to, tokenId;
+
+        if (keys.length >= 3) {
+          // Standard: from/to in keys
+          from    = keys[1];
+          to      = keys[2];
+          const low  = BigInt(data[0] || "0x0");
+          const high = BigInt(data[1] || "0x0");
+          tokenId = (low + (high << 128n)).toString();
+        } else if (data.length >= 4) {
+          // Fallback: from/to/tokenId all in data
+          from    = data[0];
+          to      = data[1];
+          const low  = BigInt(data[2] || "0x0");
+          const high = BigInt(data[3] || "0x0");
+          tokenId = (low + (high << 128n)).toString();
+        } else {
+          continue;
+        }
+
+        if (tokenId && tokenId !== "0") {
+          ownership[tokenId] = to.toLowerCase();
+        }
+      } catch(e) {
+        // skip malformed events
       }
     }
-    return [...owned];
+
+    // Return token IDs currently owned by this address
+    const normLower = normOwner.toLowerCase();
+    return Object.entries(ownership)
+      .filter(([, owner]) => owner === normLower || owner === ownerAddress.toLowerCase())
+      .map(([id]) => id);
   }
 
   async function getBeast(tokenId) {
@@ -703,7 +746,6 @@
     return card;
   }
 
-  // ── Load beasts ───────────────────────────────────────────────────────────
   async function loadBeasts(addr) {
     const gallery = document.getElementById("gallery");
     const status  = document.getElementById("status");
@@ -718,11 +760,73 @@
     status.innerHTML = '<span class="spinner"></span> Summoning your beasts from the dungeon…';
 
     try {
+      // First check total supply — if 0, nothing minted yet on this contract
+      let supply = 0;
+      try {
+        const supplyRes = await rpc("starknet_call", {
+          request: {
+            contract_address: CONTRACT,
+            entry_point_selector: "0x02dad859b8a9da8cf0f74a66f0a21e26bb49da05e4c00d43c5aa8caf46e75d43",
+            calldata: [],
+          },
+          block_id: "latest",
+        });
+        supply = parseInt(supplyRes[0] || "0x0", 16);
+      } catch(e) {
+        console.warn("total_supply call failed:", e.message);
+      }
+
+      if (supply === 0) {
+        status.innerHTML = "";
+        empty.classList.add("visible");
+        document.querySelector(".empty-text").innerHTML =
+          "No beasts have been minted yet.<br>Be the first to summon one!";
+        return;
+      }
+
       const ids = await fetchOwnedTokens(addr);
 
       if (!ids.length) {
+        // Double-check: scan token IDs 1..supply manually via owner_of
+        const OWNER_OF_SELECTOR = "0x02e4263afad30923c891518314c3c95dbe830a16874e8abc5777a9a20b54c76e";
+        const myIds = [];
+        const normAddr = addr.toLowerCase();
+
+        for (let i = 1; i <= Math.min(supply, 50); i++) {
+          try {
+            const res = await rpc("starknet_call", {
+              request: {
+                contract_address: CONTRACT,
+                entry_point_selector: OWNER_OF_SELECTOR,
+                calldata: ["0x" + i.toString(16).padStart(64,"0"), "0x0"],
+              },
+              block_id: "latest",
+            });
+            if (res && res[0]) {
+              const owner = res[0].toLowerCase();
+              const normOwner = "0x" + owner.replace("0x","").padStart(64,"0");
+              const normMe    = "0x" + normAddr.replace("0x","").padStart(64,"0");
+              if (normOwner === normMe || owner === normAddr) {
+                myIds.push(i.toString());
+              }
+            }
+          } catch(e) { /* token may not exist */ }
+        }
+
+        if (!myIds.length) {
+          status.innerHTML = "";
+          empty.classList.add("visible");
+          return;
+        }
+
+        // Found via owner_of scan
+        counter.textContent = myIds.length + " Beast" + (myIds.length !== 1 ? "s" : "") + " Found";
+        divider.classList.add("visible");
         status.innerHTML = "";
-        empty.classList.add("visible");
+        for (let i = 0; i < myIds.length; i++) {
+          const beast = await getBeast(myIds[i]) || { id:1, prefix:0, suffix:0, level:1, health:100, shiny:0, animated:0 };
+          gallery.appendChild(renderCard(myIds[i], beast, i));
+        }
         return;
       }
 
