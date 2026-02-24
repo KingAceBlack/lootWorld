@@ -304,7 +304,7 @@
   // ── Sync locked beast to Supabase via API ─────────────────────────────────────
   async function syncBeastToAPI(tokenId, beast) {
     try {
-      await fetch("https://ftdBackend.vercel.app/api/beasts", {
+      await fetch("https://ftd-Backend.vercel.app/api/beasts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -413,7 +413,7 @@
   // ── Mint on Base via API ──────────────────────────────────────────────────
   async function mintOnBase(tokenId,beast,toAddr){
     try{
-      const r=await fetch("https://ftdBackend.vercel.app/api/mintbeast",{
+      const r=await fetch("https://ftd-Backend.vercel.app/api/mintbeast",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
