@@ -128,7 +128,7 @@
   const IS_LOCKED_SEL= "0x011a8b2d9b4f79e47be56862bff2c57f3e6b30e7c8f2b17a01d6e5a42ed7e4c8";
 
   const BEAST_NAMES = ["","Warlock","Typhon","Jiangshi","Anansi","Basilisk","Gorgon","Kitsune","Lich","Chimera","Wendigo","Rakshasa","Werewolf","Banshee","Draugr","Vampire","Goblin","Skeleton","Orc","Revenant","Ghoul","Pixie","Gnome","Djinn","Fairy","Leprechaun","Kelpie","Sprite","Medusa","Jotunn","Minotaur","Kraken","Colossus","Balrog","Leviathan","Tarrasque","Titan","Nephilim","Behemoth","Hydra","Juggernaut","Fenrir","Ammit","Ifrit","Oni","Nue","Skinwalker","Chupacabra","Weretiger","Wyvern","Roc","Harpy","Pegasus","Hippogriff","Manticore","Cockatrice"];
-  const PREFIXES = ["","Agony","Apocalypse","Armageddon","Beast","Behemoth","Blight","Blood","Bramble","Brimstone","Brood","Carrion","Cataclysm","Chimeric","Corpse","Corruption","Damnation","Death","Demon","Dire","Dragon","Dread","Doom","Dusk","Elder","Ember","Ethereal","Evil","Fallen","Feral","Grave","Grim","Hate","Havoc","Horror","Hypnotic","Loath","Malice","Morbid","Oblivion","Onslaught","Pain","Pandemonium","Phantom","Plague","Rage","Rune","Skull","Soul","Sorrow","Spirit","Storm","Tempest","Terror","Shadow","Unholy","Vengeance","Vile","Void","Woe","Wrath"];
+  const PREFIXES = ["","Agony","Apocalypse","Armageddon","Beast","Behemoth","Blight","Blood","Bramble","Brimstone","Brood","Carrion","Cataclysm","Chimeric","Corpse","Corruption","Damnation","Death","Demon","Dire","Dragon","Dread","Doom","Dusk","Elder","Ember","Ethereal","Evil","Fallen","Feral","Grave","Grim","Hate","Havoc","Horror","Hypnotic","Loath","Malice","Morbid","Oblivion","Onslaught","Pain","Pandemonium","Phantom","Plague","Rage","Rune","Skull","Soul","Sorrow","Spirit","Storm","Tempest","Terror","Shadow","Unholy","Vengeance","Vile","Void","Wrath","Woe"];
   const SUFFIXES = ["","of Power","of Giants","of Titans","of Skill","of Perfection","of Brilliance","of Enlightenment","of Protection","of Anger","of Rage","of Fury","of Vitriol","of the Fox","of Detection","of Reflection","of the Twins","of Devastation","of Slaughter","of Sorrow","of Ruin","of Death","of Blight","of Dread"];
   const EMOJIS = {1:"&#x1F9D9;",2:"&#x1F300;",3:"&#x1F47B;",4:"&#x1F577;",5:"&#x1F40D;",6:"&#x1F98E;",7:"&#x1F98A;",8:"&#x1F480;",9:"&#x1F525;",10:"&#x2744;",11:"&#x1F43A;",12:"&#x1F982;",14:"&#x1F441;",15:"&#x2620;",16:"&#x1F9DB;",17:"&#x1F47A;",19:"&#x1F479;",20:"&#x1F9DF;",default:"&#x1F409;"};
 
@@ -242,7 +242,9 @@
 
   let walletProvider=null,walletAddress=null,pendingBeast=null;
 
-  // ── Lock a beast ────────────────────────────────────────
+  // ── Lock a beast ─────────────────────────────────────────────────────────
+  function lockBeast(tokenId,btn,statusEl){ executeLock(tokenId,btn,statusEl); }
+
   async function executeLock(tokenId,btn,statusEl){
     const account=walletProvider.account;
     if(!account)throw new Error("No account");
