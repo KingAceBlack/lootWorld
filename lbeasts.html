@@ -140,10 +140,14 @@
   function randInt(a,b){return Math.floor(Math.random()*(b-a+1))+a}
 
   async function rpc(method,params){
-    const r=await fetch(RPC_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({jsonrpc:"2.0",id:1,method,params})});
-    const d=await r.json();
-    if(d.error)throw new Error(d.error.message);
-    return d.result;
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),10000);
+    try{
+      const r=await fetch(RPC_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({jsonrpc:"2.0",id:1,method,params}),signal:controller.signal});
+      const d=await r.json();
+      if(d.error)throw new Error(d.error.message);
+      return d.result;
+    }finally{clearTimeout(timeout);}
   }
 
   async function callContract(contract,selector,calldata=[]){
@@ -158,49 +162,42 @@
     }catch(e){return false;}
   }
 
-  // ── Fetch owned tokens via Transfer events ────────────────────────────────
+  // ── Fetch owned tokens via balanceOf + tokenOfOwnerByIndex ──────────────
+  // ERC721Enumerable selectors
+  const BALANCE_OF_SEL          = "0x2e4263afad30923c891518314c3c95dbe830a16874e8abc5777a9a20b54c76e";
+  const TOKEN_OF_OWNER_BY_INDEX = "0x341e7b01de73e5f7c6788d79b27d3bfb61829dac8ee79ad5c5f1fd40e33afc";
+
   async function fetchOwnedTokens(ownerAddress){
-    const myNorm=normAddr(ownerAddress);
-    const zero="0x"+"0".repeat(64);
-    const ownership={};
+    const tokens = [];
 
-    // Step 1: all mint events build initial ownership map
+    // 1. Get balance
+    let balance = 0;
     try{
-      let ct=null;
-      do{
-        const filter={from_block:{block_number:0},to_block:"latest",address:NFT_CONTRACT,keys:[[TRANSFER_KEY],[zero]],chunk_size:1000};
-        if(ct)filter.continuation_token=ct;
-        const res=await rpc("starknet_getEvents",{filter});
-        for(const ev of (res.events||[])){
-          const to=normAddr(ev.keys[2]||"0x0");
-          const tokenId=BigInt(ev.keys[3]||"0x0").toString();
-          if(tokenId!=="0")ownership[tokenId]=to;
-        }
-        ct=res.continuation_token||null;
-      }while(ct);
-    }catch(e){console.warn("Mint events:",e.message);}
+      const res = await callContract(NFT_CONTRACT, BALANCE_OF_SEL, [ownerAddress]);
+      balance = parseInt(res[0], 16);
+      console.log("Balance:", balance);
+    }catch(e){
+      console.warn("balanceOf failed:", e.message);
+      return [];
+    }
 
-    // Step 2: all transfers FROM me update ownership (covers sending to vault or others)
-    try{
-      let ct=null;
-      do{
-        const filter={from_block:{block_number:0},to_block:"latest",address:NFT_CONTRACT,keys:[[TRANSFER_KEY],[myNorm]],chunk_size:1000};
-        if(ct)filter.continuation_token=ct;
-        const res=await rpc("starknet_getEvents",{filter});
-        for(const ev of (res.events||[])){
-          const to=normAddr(ev.keys[2]||"0x0");
-          const tokenId=BigInt(ev.keys[3]||"0x0").toString();
-          if(tokenId!=="0")ownership[tokenId]=to;
-        }
-        ct=res.continuation_token||null;
-      }while(ct);
-    }catch(e){console.warn("Transfer-out:",e.message);}
+    if(balance === 0) return [];
 
-    // Step 3: anything now sitting at vault address = locked by me
-    const vaultNorm=normAddr(VAULT_CONTRACT);
-    return Object.entries(ownership)
-      .filter(([,owner])=>owner===myNorm||owner===vaultNorm)
-      .map(([id,owner])=>({id,locked:owner===vaultNorm}));
+    // 2. Get each token by index
+    for(let i = 0; i < balance; i++){
+      try{
+        // index as u256 (low, high)
+        const res = await callContract(NFT_CONTRACT, TOKEN_OF_OWNER_BY_INDEX, [ownerAddress, toHex(i), "0x0"]);
+        const tokenId = BigInt(res[0]).toString();
+        // Check if locked in vault
+        const locked = await checkIsLocked(tokenId);
+        tokens.push({id: tokenId, locked});
+      }catch(e){
+        console.warn("tokenOfOwnerByIndex failed at index", i, e.message);
+      }
+    }
+
+    return tokens;
   }
 
   // get_beast
