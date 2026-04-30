@@ -162,53 +162,61 @@
     }catch(e){return false;}
   }
 
-  // ── Fetch owned tokens via Transfer events + owner_of verification ────────
-  const OWNER_OF_SEL = "0x0199e2f079a7a28e5fe29d87d3e73741f52f2e5e7d0dcabf07c0dc5dcd0b8d3";
+  // ── Fetch owned tokens via balanceOf + owner_of ─────────────────────────
+  const BALANCE_OF_SEL = "0x2e4263afad30923c891518314c3c95dbe830a16874e8abc5777a9a20b54c76e";
+  const OWNER_OF_SEL   = "0x2962ba17806af798afa6eaf4aa8c93a9fb60a3e305045b6eea33435086cae9";
 
   async function fetchOwnedTokens(ownerAddress){
-    const myNorm = normAddr(ownerAddress);
-    const zero   = "0x" + "0".repeat(64);
-    const seen   = new Set();
-    const candidates = [];
+    // Get balance first
+    let balance = 0;
+    try{
+      const res = await callContract(NFT_CONTRACT, BALANCE_OF_SEL, [ownerAddress]);
+      balance = parseInt(res[0], 16);
+      console.log("Balance:", balance);
+    }catch(e){
+      console.warn("balanceOf failed:", e.message);
+      return [];
+    }
 
-    // Step 1: get all mint events (from=0x0) to find all token IDs ever minted
+    if(balance === 0) return [];
+
+    // We know the wallet has `balance` tokens but no enumeration
+    // Fetch all Transfer events to find which token IDs were ever sent to this wallet
+    const myNorm = normAddr(ownerAddress);
+    const vaultNorm = normAddr(VAULT_CONTRACT);
+    const candidates = new Set();
+
     try{
       let ct = null;
       do{
         const filter = {
           from_block:{block_number:0}, to_block:"latest",
           address: NFT_CONTRACT,
-          keys: [[TRANSFER_KEY],[zero]],
+          keys: [[TRANSFER_KEY], [], [myNorm]],
           chunk_size: 1000
         };
         if(ct) filter.continuation_token = ct;
         const res = await rpc("starknet_getEvents", {filter});
         for(const ev of (res.events||[])){
           const tokenId = BigInt(ev.keys[3]||"0x0").toString();
-          if(tokenId !== "0" && !seen.has(tokenId)){
-            seen.add(tokenId);
-            candidates.push(tokenId);
-          }
+          if(tokenId !== "0") candidates.add(tokenId);
         }
         ct = (res.events||[]).length > 0 ? (res.continuation_token||null) : null;
       }while(ct);
-    }catch(e){ console.warn("Transfer events:", e.message); }
+    }catch(e){ console.warn("Transfer to me events:", e.message); }
 
-    console.log("Total tokens minted:", candidates.length);
+    console.log("Candidate tokens received:", candidates.size);
 
-    // Step 2: check owner_of for each candidate
+    // Verify current ownership with owner_of
     const tokens = [];
     for(const tokenId of candidates){
       try{
         const res = await callContract(NFT_CONTRACT, OWNER_OF_SEL, [padHex(tokenId), "0x0"]);
         const owner = normAddr(res[0]);
         if(owner === myNorm){
-          const locked = await checkIsLocked(tokenId);
-          tokens.push({id: tokenId, locked});
-        } else if(owner === normAddr(VAULT_CONTRACT)){
-          // locked in vault — was it locked by me? check depositor via vault
-          const locked = await checkIsLocked(tokenId);
-          if(locked) tokens.push({id: tokenId, locked: true});
+          tokens.push({id: tokenId, locked: false});
+        } else if(owner === vaultNorm){
+          tokens.push({id: tokenId, locked: true});
         }
       }catch(e){}
     }
