@@ -162,68 +162,32 @@
     }catch(e){return false;}
   }
 
-  // ── Fetch owned tokens via balanceOf + owner_of ─────────────────────────
-  const BALANCE_OF_SEL = "0x2e4263afad30923c891518314c3c95dbe830a16874e8abc5777a9a20b54c76e";
-  const OWNER_OF_SEL   = "0x2962ba17806af798afa6eaf4aa8c93a9fb60a3e305045b6eea33435086cae9";
-
+  // ── Fetch owned tokens via NFTScan API ───────────────────────────────────
   async function fetchOwnedTokens(ownerAddress){
-    // Get balance first
-    let balance = 0;
-    try{
-      const res = await callContract(NFT_CONTRACT, BALANCE_OF_SEL, [ownerAddress]);
-      balance = parseInt(res[0], 16);
-      console.log("Balance:", balance);
-    }catch(e){
-      console.warn("balanceOf failed:", e.message);
-      return [];
-    }
-
-    if(balance === 0) return [];
-
-    // We know the wallet has `balance` tokens but no enumeration
-    // Fetch all Transfer events to find which token IDs were ever sent to this wallet
-    const myNorm = normAddr(ownerAddress);
     const vaultNorm = normAddr(VAULT_CONTRACT);
-    const candidates = new Set();
+    const tokens    = [];
 
     try{
-      let ct = null;
-      do{
-        const filter = {
-          from_block:{block_number:0}, to_block:"latest",
-          address: NFT_CONTRACT,
-          keys: [[TRANSFER_KEY], [], [myNorm]],
-          chunk_size: 1000
-        };
-        if(ct) filter.continuation_token = ct;
-        const res = await rpc("starknet_getEvents", {filter});
-        for(const ev of (res.events||[])){
-          const tokenId = BigInt(ev.keys[3]||"0x0").toString();
-          if(tokenId !== "0") candidates.add(tokenId);
-        }
-        ct = (res.events||[]).length > 0 ? (res.continuation_token||null) : null;
-      }while(ct);
-    }catch(e){ console.warn("Transfer to me events:", e.message); }
+      const url = `https://starknetapi.nftscan.com/api/v2/account/own/${ownerAddress}?contract_address=${NFT_CONTRACT}&show_attribute=false`;
+      const r = await fetch(url, { headers: { "Content-Type": "application/json" } });
+      const d = await r.json();
+      console.log("NFTScan response:", d);
 
-    console.log("Candidate tokens received:", candidates.size);
-
-    // Verify current ownership with owner_of
-    const tokens = [];
-    for(const tokenId of candidates){
-      try{
-        const res = await callContract(NFT_CONTRACT, OWNER_OF_SEL, [padHex(tokenId), "0x0"]);
-        const owner = normAddr(res[0]);
-        if(owner === myNorm){
-          tokens.push({id: tokenId, locked: false});
-        } else if(owner === vaultNorm){
-          tokens.push({id: tokenId, locked: true});
-        }
-      }catch(e){}
+      const items = d?.data?.content || d?.data || [];
+      for(const item of items){
+        const tokenId = BigInt(item.token_id||"0").toString();
+        if(tokenId === "0") continue;
+        const locked = await checkIsLocked(tokenId);
+        tokens.push({id: tokenId, locked});
+      }
+    }catch(e){
+      console.warn("NFTScan failed:", e.message);
     }
 
-    console.log("Owned tokens:", tokens.length);
+    console.log("My tokens:", tokens.length);
     return tokens;
   }
+
 
   // get_beast
   const GET_BEAST_SELS=["0x01a3cd89e72b5e5d9b3a25de7b4a4d41ade5eddc0b42c7b37b7afba61d2d8e4f","0x029ce0933f3f6dd0c5c0a45a7fc87fb96a12af73da5f0da07ead96a9cab8da96"];
