@@ -87,7 +87,7 @@
 <header>
   <div class="emblem">&#x1F409;</div>
   <h1>Loot Beast</h1>
-  <p class="subtitle">Creatures of the Dungeon &mdash; Starknet Sepolia</p>
+  <p class="subtitle">Creatures of the Dungeon &mdash; Starknet</p>
   <div class="contract-badge">NFT &middot; 0x0471e7df&hellip;e0a15 &nbsp;|&nbsp; VAULT &middot; 0x027d9dd7&hellip;034e</div>
 </header>
 <div class="connect-area">
@@ -108,15 +108,15 @@
 </div>
 <footer>
   Built on <a href="https://starknet.io" target="_blank">Starknet</a> &middot;
-  <a href="https://sepolia.voyager.online/contract/0x046da8955829adf2bda310099a0063451923f02e648cf25a1203aac6335cf0e4" target="_blank">NFT on Voyager</a> &middot;
-  <a href="https://sepolia.voyager.online/contract/0x0288fce9fb618eeda48add1f1fe9fa5fd6c76da4e69b9f71069d01529596b0dd" target="_blank">Vault on Voyager</a>
+  <a href="https://voyager.online/contract/0x046da8955829adf2bda310099a0063451923f02e648cf25a1203aac6335cf0e4" target="_blank">NFT on Voyager</a> &middot;
+  <a href="https://voyager.online/contract/0x0288fce9fb618eeda48add1f1fe9fa5fd6c76da4e69b9f71069d01529596b0dd" target="_blank">Vault on Voyager</a>
 </footer>
 
 <script>
   const NFT_CONTRACT   = "0x046da8955829adf2bda310099a0063451923f02e648cf25a1203aac6335cf0e4";
   const VAULT_CONTRACT = "0x0288fce9fb618eeda48add1f1fe9fa5fd6c76da4e69b9f71069d01529596b0dd";
   // Replace with your Alchemy key
-  const RPC_URL        = "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_10/CJMHx8Zr5oQbMTXXvtxfY";
+  const RPC_URL        = "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_10/CJMHx8Zr5oQbMTXXvtxfY";
 
   const TRANSFER_KEY = "0x0099cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9";
 
@@ -263,7 +263,7 @@
         },
       ]);
       statusEl.className="card-status ok";
-      statusEl.innerHTML='<a href="https://sepolia.voyager.online/tx/'+result.transaction_hash+'" target="_blank" style="color:var(--green)">Locked!</a>';
+      statusEl.innerHTML='<a href="https://voyager.online/tx/'+result.transaction_hash+'" target="_blank" style="color:var(--green)">Locked!</a>';
 
       // Update card visually
       const card=btn.closest(".beast-card");
@@ -298,7 +298,7 @@
         calldata:[toHex(tokenId),"0x0",walletAddress],
       });
       statusEl.className="card-status ok";
-      statusEl.innerHTML='<a href="https://sepolia.voyager.online/tx/'+result.transaction_hash+'" target="_blank" style="color:var(--green)">Released!</a>';
+      statusEl.innerHTML='<a href="https://voyager.online/tx/'+result.transaction_hash+'" target="_blank" style="color:var(--green)">Released!</a>';
       const card=btn.closest(".beast-card");
       card.classList.remove("is-locked");
       btn.textContent="&#x1F512; Lock";
