@@ -116,7 +116,7 @@
   const NFT_CONTRACT   = "0x046da8955829adf2bda310099a0063451923f02e648cf25a1203aac6335cf0e4";
   const VAULT_CONTRACT = "0x0288fce9fb618eeda48add1f1fe9fa5fd6c76da4e69b9f71069d01529596b0dd";
   // Replace with your Alchemy key
-  const RPC_URL        = "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_10/CJMHx8Zr5oQbMTXXvtxfY";
+  const RPC_URL        = "https://api.cartridge.gg/x/starknet/mainnet";
 
   const TRANSFER_KEY = "0x0099cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9";
 
@@ -162,30 +162,52 @@
     }catch(e){return false;}
   }
 
-  // ── Fetch owned tokens via NFTScan API ───────────────────────────────────
+  // ── Fetch owned tokens via Transfer events ───────────────────────────────
   async function fetchOwnedTokens(ownerAddress){
+    const myNorm    = normAddr(ownerAddress);
     const vaultNorm = normAddr(VAULT_CONTRACT);
-    const tokens    = [];
+    const ownership = {};
 
+    // Get all Transfer events, build ownership map in JS
     try{
-      const url = `https://starknetapi.nftscan.com/api/v2/account/own/${ownerAddress}?contract_address=${NFT_CONTRACT}&show_attribute=false`;
-      const r = await fetch(url, { headers: { "Content-Type": "application/json" } });
-      const d = await r.json();
-      console.log("NFTScan response:", d);
+      let ct = null;
+      do{
+        const filter = {
+          from_block: {block_number: 0},
+          to_block:   "latest",
+          address:    NFT_CONTRACT,
+          keys:       [[TRANSFER_KEY]],
+          chunk_size: 1000
+        };
+        if(ct) filter.continuation_token = ct;
+        const res = await rpc("starknet_getEvents", {filter});
+        for(const ev of (res.events||[])){
+          const to      = normAddr(ev.keys[2]||"0x0");
+          const tokenId = BigInt(ev.keys[3]||"0x0").toString();
+          if(tokenId !== "0") ownership[tokenId] = to;
+        }
+        ct = (res.events||[]).length > 0 ? (res.continuation_token||null) : null;
+      }while(ct);
+    }catch(e){ console.warn("Transfer events error:", e.message); }
 
-      const items = d?.data?.content || d?.data || [];
-      for(const item of items){
-        const tokenId = BigInt(item.token_id||"0").toString();
-        if(tokenId === "0") continue;
-        const locked = await checkIsLocked(tokenId);
-        tokens.push({id: tokenId, locked});
-      }
+    console.log("Total tokens tracked:", Object.keys(ownership).length);
+
+    const tokens = Object.entries(ownership)
+      .filter(([,owner]) => owner === myNorm || owner === vaultNorm)
+      .map(([id, owner]) => ({id, locked: owner === vaultNorm}));
+
+    console.log("My tokens:", tokens.length);
+    return tokens;
+  }
+
     }catch(e){
-      console.warn("NFTScan failed:", e.message);
+      console.warn("ArkProject API failed:", e.message);
     }
 
     console.log("My tokens:", tokens.length);
     return tokens;
+  }
+
   }
 
 
