@@ -81,6 +81,21 @@
     @keyframes spin{to{transform:rotate(360deg)}}
     footer{position:relative;z-index:10;text-align:center;padding:2rem;border-top:1px solid var(--border);font-size:.7rem;color:var(--muted);letter-spacing:.1em}
     footer a{color:var(--gold);text-decoration:none}footer a:hover{color:var(--gold2)}
+
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+    .modal-overlay.hidden{display:none}
+    .modal{background:var(--dark2);border:1px solid var(--border);padding:2rem;max-width:420px;width:90%;position:relative}
+    .modal::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+    .modal-title{font-family:'Cinzel Decorative',serif;font-size:.95rem;color:var(--gold);margin-bottom:.6rem;letter-spacing:.06em}
+    .modal-sub{font-family:'IM Fell English',serif;font-style:italic;font-size:.8rem;color:var(--muted);margin-bottom:1.4rem}
+    .modal-input{width:100%;background:var(--dark3);border:1px solid var(--border);color:var(--text);font-family:'Cinzel',serif;font-size:.75rem;padding:.7rem 1rem;margin-bottom:1rem;outline:none;letter-spacing:.04em}
+    .modal-input:focus{border-color:var(--gold)}
+    .modal-input::placeholder{color:var(--muted)}
+    .modal-actions{display:flex;gap:.8rem}
+    .modal-btn{font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;padding:.7rem 0;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .25s;flex:1}
+    .modal-btn.primary{background:linear-gradient(135deg,var(--red),#6b1212);border-color:var(--red);color:var(--text)}
+    .modal-btn.primary:hover{border-color:var(--gold)}
+    .modal-btn:hover{border-color:var(--muted);color:var(--text)}
   </style>
 </head>
 <body>
@@ -240,12 +255,90 @@
       +'</svg>';
   }
 
-  let walletProvider=null,walletAddress=null,pendingBeast=null;
+  let walletProvider=null,walletAddress=null,pendingBeast=null,baseWallet=null;
 
-  // ── Lock a beast ─────────────────────────────────────────────────────────
-  function lockBeast(tokenId,btn,statusEl){ executeLock(tokenId,btn,statusEl); }
+  // ── Sync to Supabase ─────────────────────────────────────────────────────
+  async function syncBeastToAPI(tokenId, beast) {
+    try{
+      await fetch("https://ftdBackend.vercel.app/api/beasts", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+          token_id:  parseInt(tokenId),
+          owner:     walletAddress,
+          name:      beastLabel(beast.id, beast.prefix, beast.suffix),
+          beast_id:  beast.id,
+          prefix:    beast.prefix,
+          suffix:    beast.suffix,
+          level:     beast.level,
+          health:    beast.health,
+          shiny:     beast.shiny === 1,
+          animated:  beast.animated === 1,
+          is_locked: true,
+          locked_at: new Date().toISOString(),
+        }),
+      });
+    }catch(e){ console.warn("Supabase sync failed:", e.message); }
+  }
 
-  async function executeLock(tokenId,btn,statusEl){
+  // ── Mint on Base ──────────────────────────────────────────────────────────
+  async function mintOnBase(tokenId, beast, toAddr) {
+    try{
+      const r = await fetch("https://ftdBackend.vercel.app/api/mintbeast", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+          to:       toAddr,
+          token_id: parseInt(tokenId),
+          name:     beastLabel(beast.id, beast.prefix, beast.suffix),
+          beast_id: beast.id,
+          prefix:   beast.prefix,
+          suffix:   beast.suffix,
+          level:    beast.level,
+          health:   beast.health,
+          shiny:    beast.shiny === 1,
+          animated: beast.animated === 1,
+        }),
+      });
+      const d = await r.json();
+      if(d.success) console.log("Minted on Base! TX:", d.tx_hash);
+      else console.warn("Base mint failed:", d.error);
+    }catch(e){ console.warn("Base mint error:", e.message); }
+  }
+
+  // ── Show Base wallet modal, then lock ─────────────────────────────────────
+  function lockBeast(tokenId, btn, statusEl){
+    const modal = document.getElementById("base-modal");
+    const input = document.getElementById("base-wallet-input");
+
+    if(baseWallet) input.value = baseWallet;
+    modal.classList.remove("hidden");
+    input.focus();
+
+    const confirm = document.getElementById("modal-confirm");
+    const cancel  = document.getElementById("modal-cancel");
+    const newConfirm = confirm.cloneNode(true);
+    const newCancel  = cancel.cloneNode(true);
+    confirm.parentNode.replaceChild(newConfirm, confirm);
+    cancel.parentNode.replaceChild(newCancel, cancel);
+
+    document.getElementById("modal-cancel").onclick = () => {
+      modal.classList.add("hidden");
+    };
+    document.getElementById("modal-confirm").onclick = async () => {
+      const addr = input.value.trim();
+      if(!/^0x[a-fA-F0-9]{40}$/.test(addr)){
+        input.style.borderColor = "var(--red2)";
+        return;
+      }
+      input.style.borderColor = "";
+      baseWallet = addr;
+      modal.classList.add("hidden");
+      await executeLock(tokenId, btn, statusEl, addr);
+    };
+  }
+
+  async function executeLock(tokenId,btn,statusEl,toBaseAddr){
     const account=walletProvider.account;
     if(!account)throw new Error("No account");
     btn.disabled=true;btn.textContent="Locking...";
@@ -400,5 +493,17 @@
   });
 </script>
 
+
+<div class="modal-overlay hidden" id="base-modal">
+  <div class="modal">
+    <div class="modal-title">&#x26D3; Bridge to Base</div>
+    <div class="modal-sub">Enter your Base wallet address to receive this beast on Base mainnet.</div>
+    <input class="modal-input" id="base-wallet-input" type="text" placeholder="0x... Base wallet address" autocomplete="off" spellcheck="false"/>
+    <div class="modal-actions">
+      <button class="modal-btn" id="modal-cancel">Cancel</button>
+      <button class="modal-btn primary" id="modal-confirm">&#x1F512; Lock &amp; Bridge</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
