@@ -148,7 +148,7 @@
   const EMOJIS = {1:"&#x1F9D9;",2:"&#x1F300;",3:"&#x1F47B;",4:"&#x1F577;",5:"&#x1F40D;",6:"&#x1F98E;",7:"&#x1F98A;",8:"&#x1F480;",9:"&#x1F525;",10:"&#x2744;",11:"&#x1F43A;",12:"&#x1F982;",14:"&#x1F441;",15:"&#x2620;",16:"&#x1F9DB;",17:"&#x1F47A;",19:"&#x1F479;",20:"&#x1F9DF;",default:"&#x1F409;"};
 
   function shortAddr(a){return a.slice(0,6)+"..."+a.slice(-4)}
-  function beastLabel(id,p,s){const parts=[PREFIXES[p]||"",BEAST_NAMES[id]||("Beast #"+id)];if(s&&SUFFIXES[s])parts.push(SUFFIXES[s]);return parts.filter(Boolean).join(" ")}
+  function beastLabel(id,p,s){const parts=[];if(p&&PREFIXES[p])parts.push(PREFIXES[p]);if(s&&SUFFIXES[s])parts.push(SUFFIXES[s]);parts.push(BEAST_NAMES[id]||("Beast #"+id));return parts.filter(Boolean).join(" ");}
   function toHex(n){return "0x"+BigInt(n).toString(16)}
   function padHex(n){return "0x"+BigInt(n).toString(16).padStart(64,"0")}
   function normAddr(a){return "0x"+a.toLowerCase().replace("0x","").padStart(64,"0")}
