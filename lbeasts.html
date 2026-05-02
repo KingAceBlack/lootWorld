@@ -192,19 +192,23 @@
       if(balance === 0) return [];
     }catch(e){ return []; }
 
-    // Verify ownership of token 79021
-    try{
-      const res = await callContract(NFT_CONTRACT, OWNER_OF_SEL, [padHex("79021"), "0x0"]);
-      const owner = normAddr(res[0]);
-      console.log("owner_of 79021:", owner, "| me:", myNorm);
-      if(owner === myNorm){
-        return [{id: "79021", locked: false}];
-      } else if(owner === vaultNorm){
-        return [{id: "79021", locked: true}];
-      }
-    }catch(e){ console.warn("owner_of failed:", e.message); }
+    // Check ownership of known token IDs
+    const TOKEN_IDS = ["79021","80713","57592","80228","68640","65766","82637","78471","82807","82320"];
+    const tokens = [];
 
-    return [];
+    for(const tokenId of TOKEN_IDS){
+      try{
+        const res = await callContract(NFT_CONTRACT, OWNER_OF_SEL, [padHex(tokenId), "0x0"]);
+        const owner = normAddr(res[0]);
+        if(owner === myNorm){
+          tokens.push({id: tokenId, locked: false});
+        } else if(owner === vaultNorm){
+          tokens.push({id: tokenId, locked: true});
+        }
+      }catch(e){ console.warn("owner_of failed for", tokenId, e.message); }
+    }
+
+    return tokens;
   }
   // get_beast — returns PackableBeast
   const GET_BEAST_SEL = "0x385b69551f247794fe651459651cdabc76b6cdf4abacafb5b28ceb3b1ac2e98";
