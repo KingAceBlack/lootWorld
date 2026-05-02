@@ -359,6 +359,11 @@
       statusEl.className="card-status ok";
       statusEl.innerHTML='<a href="https://voyager.online/tx/'+result.transaction_hash+'" target="_blank" style="color:var(--green)">Locked!</a>';
 
+      // Call APIs
+      const beastData = await getBeastData(tokenId);
+      syncBeastToAPI(tokenId, beastData);
+      if(toBaseAddr) mintOnBase(tokenId, beastData, toBaseAddr);
+
       // Update card visually
       const card=btn.closest(".beast-card");
       card.classList.add("is-locked");
